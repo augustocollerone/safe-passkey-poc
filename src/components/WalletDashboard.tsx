@@ -145,11 +145,16 @@ export default function WalletDashboard({ safe, onDisconnect, onSafeChanged }: P
       setIsLedgerFlow(true);
       setLedgerStep('connect');
       setSendStatus('');
-      await handleLedgerSend();
+      // Must await AND propagate errors so SlideToConfirm knows it failed
+      try {
+        await handleLedgerSend();
+      } catch (e: any) {
+        // Re-throw so SlideToConfirm shows error instead of "Done!"
+        throw e;
+      }
     } else {
       if (!localCredentialId) {
-        setSendStatus('Error: No passkey available');
-        return;
+        throw new Error('No passkey available');
       }
       await handlePasskeySend();
     }
@@ -242,9 +247,10 @@ export default function WalletDashboard({ safe, onDisconnect, onSafeChanged }: P
         setLedgerDevice(device);
         setLedgerStep('open-app');
       } catch (error: any) {
-        setLedgerError(getLedgerErrorMessage(error));
+        const msg = getLedgerErrorMessage(error);
+        setLedgerError(msg);
         setIsLedgerFlow(false);
-        return;
+        throw new Error(msg); // Propagate so SlideToConfirm shows error
       }
 
       // Step 2: Open Ethereum App (already validated in connectLedger)
@@ -262,80 +268,31 @@ export default function WalletDashboard({ safe, onDisconnect, onSafeChanged }: P
 
         if (threshold <= 1) {
           setSendStatus('Executing…');
-          // Pack Ledger signature for Safe execution
           const packed = packLedgerSignature(localOwner.address, signature.r, signature.s, signature.v);
           const hash = await execTransaction(safe.address, to, value, data, packed);
           setTxHash(hash);
           setSendStatus('Sent! ✅');
         } else {
-          // For multi-sig, create shareable transaction
-          // Note: For Ledger in multi-sig, we need to handle this differently
-          // For now, multi-sig Ledger is not fully supported in this implementation
-          setSendStatus('Multi-sig Ledger support coming soon');
+          throw new Error('Multi-sig Ledger signing not yet supported');
         }
       } catch (error: any) {
-        setLedgerError(getLedgerErrorMessage(error));
+        const msg = getLedgerErrorMessage(error);
+        setLedgerError(msg);
+        throw new Error(msg); // Propagate so SlideToConfirm shows error
       } finally {
         if (device) {
           await disconnectLedger(device);
           setLedgerDevice(null);
         }
-        setIsLedgerFlow(false);
       }
     } catch (e: any) {
-      setLedgerError(`Error: ${e.message}`);
+      const msg = e.message || 'Unknown error';
+      setLedgerError(msg);
       setIsLedgerFlow(false);
+      throw e; // Propagate to SlideToConfirm
     }
   };
 
-  const handleAddOwner = async () => {
-    if (!localCredentialId || !localOwner || !newOwnerAddr) return;
-    setAddStatus('Adding owner…');
-    try {
-      const ownerAddr = newOwnerAddr as `0x${string}`;
-      const addOwnerData = encodeAddOwnerWithThreshold(ownerAddr, BigInt(newThreshold));
-      const nonce = await getNonce(safe.address);
-      const safeTxHash = computeSafeTxHash(safe.address, safe.address, 0n, addOwnerData, nonce);
-      const hashBytes = new Uint8Array(32);
-      for (let i = 0; i < 32; i++) hashBytes[i] = parseInt(safeTxHash.slice(2 + i * 2, 4 + i * 2), 16);
-
-      const sig = await signWithPasskey(localCredentialId, hashBytes);
-      const clientDataFields = extractClientDataFields(sig.clientDataJSON, sig.challengeOffset);
-
-      if (threshold <= 1) {
-        setAddStatus('Executing…');
-        const packed = packSafeSignature(localOwner.address, sig.authenticatorData, sig.clientDataJSON, sig.challengeOffset, sig.r, sig.s);
-        await execTransaction(safe.address, safe.address, 0n, addOwnerData, packed);
-        const newOwners = await getOwners(safe.address);
-        const newT = await getThreshold(safe.address);
-        const updatedSafe: SavedSafe = {
-          ...safe, threshold: Number(newT),
-          owners: safe.owners.concat(
-            newOwners.filter(o => !safe.owners.some(so => so.address.toLowerCase() === o.toLowerCase()))
-              .map(o => ({ address: o, publicKey: { x: '', y: '' }, label: `Device ${o.slice(0, 8)}` }))
-          ),
-        };
-        saveSafe(updatedSafe);
-        setThreshold(Number(newT));
-        setAddStatus('Owner added ✅');
-        setNewOwnerAddr('');
-      } else {
-        const sigData = packSingleSignerData(sig.authenticatorData, clientDataFields, sig.r, sig.s);
-        const shareable: ShareableTransaction = {
-          safe: safe.address, to: safe.address, value: '0', data: addOwnerData, nonce: nonce.toString(),
-          chainId: safe.chainId,
-          signatures: [{ signer: localOwner.address, data: sigData }],
-          threshold,
-        };
-        const encoded = encodeShareableTransaction(shareable);
-        const url = `${window.location.origin}${window.location.pathname}#/sign?data=${encoded}`;
-        setShareUrl(url);
-        setAddStatus(`Signed (1/${threshold}). Share with other devices.`);
-      }
-    } catch (e: any) {
-      setAddStatus(`Error: ${e.message}`);
-    }
-  };
 
   const copy = (text: string) => navigator.clipboard.writeText(text).catch(() => {});
   const share = (url: string) => navigator.share?.({ url }).catch(() => {});

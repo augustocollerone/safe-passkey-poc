@@ -96,7 +96,7 @@ export default function App() {
         <ApproveTransaction encodedData={route.data} />
       )}
       {route.page === 'settings' && savedSafe && (
-        <Settings safe={savedSafe} onBack={() => window.location.hash = '#/'} />
+        <Settings safe={savedSafe} onBack={() => window.location.hash = '#/'} onSafeUpdated={(s) => setSavedSafe(s)} />
       )}
       {route.page === 'invite' && savedSafe && route.safeAddress === savedSafe.address && (
         <InviteSigner safe={savedSafe} onBack={() => window.location.hash = '#/'} />

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { type SavedSafe } from '../lib/storage';
+import { type SavedSafe, getSignerType, getActiveSafe } from '../lib/storage';
 import { getOwners, getThreshold, getNonce, execTransaction, encodeChangeThreshold } from '../lib/safe';
 import { computeSafeTxHash, packSafeSignature } from '../lib/encoding';
 import { signWithPasskey } from '../lib/webauthn';
@@ -14,6 +14,7 @@ import SignerSwitch from './SignerSwitch';
 interface Props {
   safe: SavedSafe;
   onBack: () => void;
+  onSafeUpdated?: (safe: SavedSafe) => void;
 }
 
 const COLORS = ['#6366F1', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981', '#3B82F6'];
@@ -25,7 +26,8 @@ const extractClientDataFields = (clientDataJSON: string, challengeOffset: number
   return clientDataJSON.slice(challengeEnd + 2, clientDataJSON.length - 1);
 };
 
-export default function Settings({ safe, onBack }: Props) {
+export default function Settings({ safe: initialSafe, onBack, onSafeUpdated }: Props) {
+  const [safe, setSafe] = useState<SavedSafe>(initialSafe);
   const [owners, setOwners] = useState<`0x${string}`[]>([]);
   const [threshold, setThreshold] = useState(safe.threshold);
   const [newThreshold, setNewThreshold] = useState(safe.threshold);
@@ -104,8 +106,10 @@ export default function Settings({ safe, onBack }: Props) {
 
   const getOwnerLabel = (address: string) => {
     const savedOwner = safe.owners.find(o => o.address.toLowerCase() === address.toLowerCase());
-    if (savedOwner && savedOwner.credentialId) return 'This Device';
+    if (savedOwner && savedOwner.credentialId) return 'This Device (Passkey)';
     if (savedOwner && savedOwner.label) return savedOwner.label;
+    // Check if this is a known Ledger owner (no credentialId, signerType is ledger or no credentialId at all)
+    if (savedOwner && getSignerType(safe) === 'ledger') return 'Ledger Device';
     return `Signer ${address.slice(2, 6)}`;
   };
 
@@ -113,7 +117,15 @@ export default function Settings({ safe, onBack }: Props) {
     return (
       <SignerSwitch 
         safe={safe} 
-        onBack={() => setShowSignerSwitch(false)} 
+        onBack={() => {
+          // Reload safe from storage in case it was updated
+          const refreshed = getActiveSafe();
+          if (refreshed) {
+            setSafe(refreshed);
+            onSafeUpdated?.(refreshed);
+          }
+          setShowSignerSwitch(false);
+        }} 
       />
     );
   }
@@ -248,10 +260,10 @@ export default function Settings({ safe, onBack }: Props) {
             <p className="text-muted text-sm">How you sign transactions</p>
           </div>
           <span className="badge badge-success">
-            {localOwner?.credentialId ? 'Passkey' : 'Ledger'}
+            {getSignerType(safe) === 'passkey' ? 'Passkey' : 'Ledger'}
           </span>
         </div>
-        {localOwner?.credentialId && (
+        {getSignerType(safe) === 'passkey' && (
           <button 
             className="btn btn-secondary btn-sm" 
             onClick={() => setShowSignerSwitch(true)}

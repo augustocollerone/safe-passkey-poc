@@ -136,10 +136,8 @@ export default function SignerSwitch({ safe, onBack }: Props) {
             ? { 
                 address: ledgerState.device!.address, 
                 label: 'Ledger Device',
-                // For Ledger devices, we don't have the public key in the same format
-                // Using placeholder values since this is just for storage purposes
-                publicKey: { x: '0x', y: '0x' }
-                // Note: No credentialId field for Ledger owners
+                publicKey: { x: '0x', y: '0x' },
+                signerType: 'ledger' as const,
               }
             : owner
         );
