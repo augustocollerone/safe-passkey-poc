@@ -47,16 +47,11 @@ export default function JoinWallet({ safeAddress, onJoined }: Props) {
       const addr = await getSignerAddress(cred.publicKey.x, cred.publicKey.y);
       setSignerAddress(addr);
 
-      // Step 3: Notify the inviter (don't add to wallet yet)
-      // The inviter needs to approve before this device becomes a signer
+      // Step 3: Done — the inviter must approve on their device
+      // Do NOT redirect or auto-add. Show the address so the new signer can share it.
       setPhase('done');
       
-      // Redirect back to invite page with new signer address
-      const currentHash = window.location.hash;
-      const baseHash = currentHash.split('?')[0].replace('#/join', '#/invite');
-      window.location.hash = `${baseHash}?safe=${safeAddress}&newSigner=${addr}`;
-      
-      // Save incomplete wallet locally for future reference
+      // Save wallet locally (marked as pending until inviter approves)
       const existingOwners: SavedOwner[] = owners.map(o => ({
         address: o, publicKey: { x: '', y: '' }, label: `Device ${o.slice(0, 8)}`,
       }));
