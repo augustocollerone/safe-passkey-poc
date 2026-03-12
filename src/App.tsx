@@ -5,6 +5,7 @@ import CreateWallet from './components/CreateWallet';
 import WalletDashboard from './components/WalletDashboard';
 import JoinWallet from './components/JoinWallet';
 import ApproveTransaction from './components/ApproveTransaction';
+import Settings from './components/Settings';
 
 export default function App() {
   const [route, setRoute] = useState<Route>(parseRoute());
@@ -92,6 +93,9 @@ export default function App() {
       )}
       {route.page === 'sign' && (
         <ApproveTransaction encodedData={route.data} />
+      )}
+      {route.page === 'settings' && savedSafe && (
+        <Settings safe={savedSafe} onBack={() => window.location.hash = '#/'} />
       )}
       {route.page === 'home' && savedSafe && (
         <WalletDashboard safe={savedSafe} onDisconnect={handleDisconnect} onSafeChanged={handleSafeChanged} />

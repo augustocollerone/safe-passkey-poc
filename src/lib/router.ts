@@ -3,7 +3,8 @@
 export type Route =
   | { page: 'home' }
   | { page: 'join'; safeAddress: `0x${string}` }
-  | { page: 'sign'; data: string };
+  | { page: 'sign'; data: string }
+  | { page: 'settings' };
 
 export function parseRoute(): Route {
   const hash = window.location.hash;
@@ -22,6 +23,10 @@ export function parseRoute(): Route {
     if (data) {
       return { page: 'sign', data };
     }
+  }
+
+  if (hash === '#/settings') {
+    return { page: 'settings' };
   }
 
   return { page: 'home' };

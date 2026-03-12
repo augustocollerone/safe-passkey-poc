@@ -241,7 +241,17 @@ export default function WalletDashboard({ safe, onDisconnect, onSafeChanged }: P
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2 style={{ fontSize: 20, fontWeight: 700 }}>🔐 Passkey Wallet</h2>
-        <SafeSelector currentSafe={safe} onSafeChanged={onSafeChanged} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <SafeSelector currentSafe={safe} onSafeChanged={onSafeChanged} />
+          <button 
+            className="btn btn-icon" 
+            style={{ width: 40, height: 40, fontSize: 16 }} 
+            onClick={() => window.location.hash = '#/settings'}
+            title="Settings"
+          >
+            ⚙️
+          </button>
+        </div>
       </div>
 
       {/* Balance Card */}
