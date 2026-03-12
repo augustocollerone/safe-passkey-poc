@@ -72,6 +72,26 @@ const SAFE_ABI = [
     ],
     outputs: [],
   },
+  {
+    name: 'swapOwner',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'prevOwner', type: 'address' },
+      { name: 'oldOwner', type: 'address' },
+      { name: 'newOwner', type: 'address' },
+    ],
+    outputs: [],
+  },
+  {
+    name: 'changeThreshold',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: '_threshold', type: 'uint256' },
+    ],
+    outputs: [],
+  },
 ] as const;
 
 const PROXY_FACTORY_ABI = [
@@ -186,5 +206,27 @@ export function encodeAddOwnerWithThreshold(
     abi: SAFE_ABI,
     functionName: 'addOwnerWithThreshold',
     args: [owner, threshold],
+  });
+}
+
+export function encodeSwapOwner(
+  prevOwner: `0x${string}`,
+  oldOwner: `0x${string}`,
+  newOwner: `0x${string}`
+): Hex {
+  return encodeFunctionData({
+    abi: SAFE_ABI,
+    functionName: 'swapOwner',
+    args: [prevOwner, oldOwner, newOwner],
+  });
+}
+
+export function encodeChangeThreshold(
+  newThreshold: bigint
+): Hex {
+  return encodeFunctionData({
+    abi: SAFE_ABI,
+    functionName: 'changeThreshold',
+    args: [newThreshold],
   });
 }

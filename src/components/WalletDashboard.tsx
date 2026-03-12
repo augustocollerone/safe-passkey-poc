@@ -218,9 +218,19 @@ export default function WalletDashboard({ safe, onDisconnect }: Props) {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2 style={{ fontSize: 20, fontWeight: 700 }}>🔐 Passkey Wallet</h2>
-        <button className="btn btn-ghost btn-sm" style={{ width: 'auto' }} onClick={() => { clearSafe(); onDisconnect(); }}>
-          Disconnect
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button 
+            className="btn btn-icon" 
+            style={{ width: 40, height: 40, fontSize: 16 }} 
+            onClick={() => window.location.hash = '#/settings'}
+            title="Settings"
+          >
+            ⚙️
+          </button>
+          <button className="btn btn-ghost btn-sm" style={{ width: 'auto' }} onClick={() => { clearSafe(); onDisconnect(); }}>
+            Disconnect
+          </button>
+        </div>
       </div>
 
       {/* Balance Card */}

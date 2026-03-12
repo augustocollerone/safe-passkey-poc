@@ -258,3 +258,70 @@ body {
   color: var(--text-primary);
   outline: none;
 }
+
+/* ---- Settings-specific styles ---- */
+.settings-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.settings-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-item:last-child {
+  border-bottom: none;
+}
+
+.settings-label {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.settings-description {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.settings-value {
+  font-weight: 600;
+  color: var(--primary-from);
+}
+
+/* ---- Enhanced warning/info cards ---- */
+.warning-card {
+  background: #FEF3C7;
+  border: 1px solid #F59E0B;
+  color: #92400E;
+}
+
+.info-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+
+.success-info-card {
+  background: var(--success-light);
+  border: 1px solid var(--success);
+}
+
+/* ---- Transaction preview styles ---- */
+.tx-preview-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: var(--bg);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+}
+
+.tx-preview-arrow {
+  font-size: 18px;
+  color: var(--text-muted);
+}
