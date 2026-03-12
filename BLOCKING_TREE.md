@@ -39,7 +39,7 @@ T11: Ledger Integration (real) ──── depends on T8
 ### Wave 3 (depends on Waves 1+2)
 - **T5**: Re-send from History (needs T4)
 - **T6**: Uniswap Swaps + Fee (needs T1 for token selection)
-- **T7**: Chain Abstraction (needs T1 + T3)
+- ~~**T7**: Chain Abstraction (needs T1 + T3)~~ **⏸️ PAUSED**
 
 ### Wave 4 (deferred)
 - **T10**: ENS Subdomains
