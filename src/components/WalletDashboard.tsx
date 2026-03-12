@@ -3,6 +3,7 @@ import { formatEther, parseEther, parseAbiItem } from 'viem';
 import QRCode from 'qrcode';
 import { publicClient, EXPLORER } from '../lib/relayer';
 import SlideToConfirm from './shared/SlideToConfirm';
+import SafeSelector from './SafeSelector';
 import { getNonce, execTransaction, getOwners, getThreshold, encodeAddOwnerWithThreshold } from '../lib/safe';
 import { computeSafeTxHash, packSafeSignature } from '../lib/encoding';
 import { signWithPasskey } from '../lib/webauthn';
@@ -18,6 +19,7 @@ type View = 'home' | 'send' | 'receive' | 'add-owner';
 interface Props {
   safe: SavedSafe;
   onDisconnect: () => void;
+  onSafeChanged: (safe: SavedSafe | null) => void;
 }
 
 function timeAgo(timestamp: number): string {
@@ -37,7 +39,7 @@ const extractClientDataFields = (clientDataJSON: string, challengeOffset: number
   return clientDataJSON.slice(challengeEnd + 2, clientDataJSON.length - 1);
 };
 
-export default function WalletDashboard({ safe, onDisconnect }: Props) {
+export default function WalletDashboard({ safe, onDisconnect, onSafeChanged }: Props) {
   const [view, setView] = useState<View>('home');
   const [balance, setBalance] = useState<bigint>(0n);
   const [owners, setOwners] = useState<`0x${string}`[]>([]);
@@ -218,9 +220,7 @@ export default function WalletDashboard({ safe, onDisconnect }: Props) {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2 style={{ fontSize: 20, fontWeight: 700 }}>🔐 Passkey Wallet</h2>
-        <button className="btn btn-ghost btn-sm" style={{ width: 'auto' }} onClick={() => { clearSafe(); onDisconnect(); }}>
-          Disconnect
-        </button>
+        <SafeSelector currentSafe={safe} onSafeChanged={onSafeChanged} />
       </div>
 
       {/* Balance Card */}
