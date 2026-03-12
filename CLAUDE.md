@@ -144,6 +144,21 @@ VITE_RELAYER_PRIVATE_KEY=0x...  # Relayer EOA private key (Base Sepolia funded)
 2. Parse it in `parseRoute()`
 3. Handle it in `App.tsx`'s render logic
 
+## 🧪 Visual Verification
+
+After implementing changes, you MUST visually verify your work:
+
+1. Run `npm run dev` to start the dev server
+2. Use the browser tool (if available) or take a screenshot to verify:
+   - The page loads without errors (check browser console)
+   - The UI renders correctly on mobile viewport (375px width)
+   - New components are visible and properly styled
+3. If you see runtime errors in the console, FIX THEM before committing
+4. Common pitfalls to check:
+   - **Buffer/Node.js globals**: Browser doesn't have `Buffer`. Use `Uint8Array` or add a polyfill in `vite.config.ts`
+   - **API errors**: Test API calls work (correct URLs, no CORS issues)
+   - **QR codes**: Ensure `qrcode` library generates correctly (check canvas/SVG rendering)
+
 ## ⚠️ Important Constraints
 
 - **Mobile-first**: All UI must work on mobile Safari. Test at 375px width.
