@@ -20,6 +20,7 @@ T8: Settings / Signer Management ──┤
                                    └──→ T9: Add Signer Flow (improved)
 
 T10: ENS Subdomains (standalone, Phase 4 — deferred)
+T11: Ledger Integration (real) ──── depends on T8
 ```
 
 ## Parallelism Map
@@ -33,6 +34,7 @@ T10: ENS Subdomains (standalone, Phase 4 — deferred)
 ### Wave 2 (depends on Wave 1)
 - **T4**: Transaction History (needs T1 for token display)
 - **T9**: Add Signer Flow (needs T8 for signer management logic)
+- **T11**: Ledger Integration (needs T8 for SignerSwitch UI)
 
 ### Wave 3 (depends on Waves 1+2)
 - **T5**: Re-send from History (needs T4)
@@ -288,6 +290,33 @@ T10: ENS Subdomains (standalone, Phase 4 — deferred)
 - Invite expiry
 - Revoking pending invites
 - Push notifications
+
+---
+
+### T11: Ledger Integration (Real)
+
+**Context:** T8 added the Settings screen with "Switch to Ledger" as coming soon. This task implements the actual Ledger connection.
+
+**Files to create:**
+- `src/lib/ledger.ts` — Ledger transport (WebUSB/WebHID), Ethereum app connection, address derivation, transaction signing
+
+**Files to modify:**
+- `src/components/SignerSwitch.tsx` — Replace "coming soon" with real Ledger connection flow: detect device → get address → swapOwner tx → confirm
+- `package.json` — Add `@ledgerhq/hw-transport-webusb` and `@ledgerhq/hw-app-eth`
+
+**Acceptance Criteria:**
+- [ ] User can connect Ledger via USB from mobile/desktop browser
+- [ ] App reads Ethereum address from Ledger
+- [ ] swapOwner Safe tx replaces passkey signer with Ledger address
+- [ ] After switch, transactions require Ledger signature instead of passkey
+- [ ] Error handling: device not found, app not open, user rejected
+- [ ] Fallback to WebHID if WebUSB not available
+
+**Dependencies:** T8
+
+**Out of scope:**
+- Bluetooth Ledger (Nano X) — USB only for now
+- Multi-path derivation selection
 
 ---
 
