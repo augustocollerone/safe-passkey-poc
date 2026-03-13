@@ -4,11 +4,12 @@ interface Props {
   onConfirm: () => Promise<void>;
   label?: string;
   disabled?: boolean;
+  testId?: string;
 }
 
 type SliderState = 'idle' | 'dragging' | 'confirming' | 'success' | 'error';
 
-export default function SlideToConfirm({ onConfirm, label = 'Slide to approve', disabled = false }: Props) {
+export default function SlideToConfirm({ onConfirm, label = 'Slide to approve', disabled = false, testId }: Props) {
   const [state, setState] = useState<SliderState>('idle');
   const [progress, setProgress] = useState(0);
   const [statusText, setStatusText] = useState('');
@@ -88,6 +89,7 @@ export default function SlideToConfirm({ onConfirm, label = 'Slide to approve', 
     <div
       ref={trackRef}
       className={`slide-track ${disabled ? 'slide-disabled' : ''}`}
+      data-testid={testId}
       style={{ height: trackHeight, background: trackBg, position: 'relative', borderRadius: trackHeight / 2, overflow: 'hidden', userSelect: 'none', touchAction: 'none' }}
       onMouseMove={onMouseMove}
       onMouseUp={onMouseUp}

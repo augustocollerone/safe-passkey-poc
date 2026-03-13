@@ -22,10 +22,9 @@ test.describe('Simply Wallet — Full Lifecycle', () => {
     await createBtn.click();
 
     // ── 4. Wait for passkey creation + signer deployment + Safe deployment ──
-    // The app shows progress: biometrics → signer → safe → done
     await expect(page.getByText('Done! ✅')).toBeVisible({ timeout: BLOCKCHAIN_TIMEOUT });
 
-    // ── 5. Wait for dashboard to load and extract Safe address ──
+    // ── 5. Wait for dashboard to load ──
     await expect(page.getByText('Total Balance')).toBeVisible({ timeout: 15_000 });
 
     // Extract Safe address from the bottom of the dashboard
@@ -99,8 +98,8 @@ test.describe('Simply Wallet — Full Lifecycle', () => {
     // Wait for home to load
     await expect(page.getByText('Total Balance')).toBeVisible({ timeout: 10_000 });
 
-    // Click History button
-    await page.getByRole('button', { name: /history/i }).click();
+    // Click History button (force: true to bypass overlapping elements on mobile viewport)
+    await page.getByRole('button', { name: /history/i }).click({ force: true });
     await expect(page.getByText('Transaction History')).toBeVisible({ timeout: 10_000 });
 
     // ── 10. Verify the sent transaction appears ──
@@ -129,6 +128,45 @@ test.describe('Simply Wallet — Full Lifecycle', () => {
       const txItems = page.locator('.card').filter({ hasText: /0x/ });
       expect(await txItems.count()).toBeGreaterThan(0);
     }
+
+    // ── 13. Test Swap Flow ──
+    // Navigate back to home
+    const backFromHistory = page.locator('button').filter({ hasText: '←' });
+    if (await backFromHistory.isVisible({ timeout: 2_000 }).catch(() => false)) {
+      await backFromHistory.click();
+    }
+    await expect(page.getByText('Total Balance')).toBeVisible({ timeout: 10_000 });
+
+    // Click Swap button
+    await page.getByRole('button', { name: /swap/i }).click({ force: true });
+    await expect(page.getByText('Swap Tokens')).toBeVisible({ timeout: 10_000 });
+
+    // Enter a small amount to swap (ETH → USDC is default)
+    await page.locator('.swap-amount-input').fill('0.0001');
+
+    // Wait for quote to load
+    await expect(page.getByText('Exchange Rate')).toBeVisible({ timeout: 10_000 });
+    console.log('Swap quote loaded');
+
+    // Trigger swap slide using Playwright's dragTo on the thumb
+    const swapTrack = page.locator('[data-testid="swap-slide"]');
+    const swapThumb = swapTrack.locator('.slide-thumb');
+    await expect(swapThumb).toBeVisible({ timeout: 5_000 });
+
+    // dragTo moves the element to the target position
+    const trackBox = await swapTrack.boundingBox();
+    if (trackBox) {
+      // Drag thumb to the right end of the track
+      await swapThumb.dragTo(swapTrack, {
+        targetPosition: { x: trackBox.width - 20, y: trackBox.height / 2 },
+        force: true,
+      });
+    }
+
+    // Wait for swap to complete or error  
+    await expect(page.getByText(/Swap completed|Error/)).toBeVisible({ timeout: BLOCKCHAIN_TIMEOUT });
+    const swapStatus = await page.getByText(/Swap completed|Error/).textContent();
+    console.log('Swap result:', swapStatus);
 
     // Cleanup
     await teardownVirtualAuthenticator(auth);

@@ -307,6 +307,7 @@ export default function SwapView({ safe, onBack }: Props) {
           label="Slide to swap"
           disabled={!canSwap}
           onConfirm={handleSwap}
+          testId="swap-slide"
         />
       ) : (
         <button 
