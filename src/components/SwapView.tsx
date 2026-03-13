@@ -211,43 +211,57 @@ export default function SwapView({ safe, onBack }: Props) {
         </div>
       </div>
 
-      {/* Settings Panel */}
+      {/* Settings Modal */}
       {showSettings && (
-        <div className="card fade-in">
-          <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Settings</h3>
-          <div>
-            <label style={{ fontSize: 14, fontWeight: 500, marginBottom: 8, display: 'block' }}>
-              Price Flexibility
-            </label>
-            <div style={{ display: 'flex', gap: 8 }}>
-              {[0.1, 0.5, 1.0, 3.0].map(value => (
-                <button
-                  key={value}
-                  className={`btn btn-sm ${slippage === value ? 'btn-primary' : 'btn-secondary'}`}
-                  style={{ flex: 1, padding: '8px 12px', fontSize: 12 }}
-                  onClick={() => setSlippage(value)}
-                >
-                  {value}%
-                </button>
-              ))}
+        <div className="swap-settings-overlay" onClick={() => setShowSettings(false)}>
+          <div className="swap-settings-sheet" onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>Settings</h3>
+              <button
+                className="btn btn-ghost"
+                style={{ width: 32, height: 32, padding: 0, fontSize: 18, lineHeight: 1 }}
+                onClick={() => setShowSettings(false)}
+              >✕</button>
             </div>
-            <div style={{ position: 'relative', marginTop: 8 }}>
-              <input
-                type="text"
-                inputMode="decimal"
-                className="input"
-                style={{ fontSize: 14, paddingRight: 32 }}
-                placeholder="Custom"
-                value={slippage}
-                onChange={e => {
-                  const val = e.target.value.replace(',', '.');
-                  const num = parseFloat(val);
-                  if (!isNaN(num) && num >= 0 && num <= 50) setSlippage(num);
-                  else if (val === '' || val === '0' || val === '0.') setSlippage(0.5);
-                }}
-              />
-              <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)', fontSize: 14, pointerEvents: 'none' }}>%</span>
+            <div>
+              <label style={{ fontSize: 14, fontWeight: 500, marginBottom: 8, display: 'block' }}>
+                Price Flexibility
+              </label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {[0.1, 0.5, 1.0, 3.0].map(value => (
+                  <button
+                    key={value}
+                    className={`btn btn-sm ${slippage === value ? 'btn-primary' : 'btn-secondary'}`}
+                    style={{ flex: 1, padding: '8px 12px', fontSize: 12 }}
+                    onClick={() => setSlippage(value)}
+                  >
+                    {value}%
+                  </button>
+                ))}
+              </div>
+              <div style={{ position: 'relative', marginTop: 8 }}>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  className="input"
+                  style={{ fontSize: 14, paddingRight: 32 }}
+                  placeholder="Custom"
+                  value={slippage}
+                  onChange={e => {
+                    const val = e.target.value.replace(',', '.');
+                    const num = parseFloat(val);
+                    if (!isNaN(num) && num >= 0 && num <= 50) setSlippage(num);
+                    else if (val === '' || val === '0' || val === '0.') setSlippage(0.5);
+                  }}
+                />
+                <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)', fontSize: 14, pointerEvents: 'none' }}>%</span>
+              </div>
             </div>
+            <button
+              className="btn btn-primary"
+              style={{ width: '100%', marginTop: 20 }}
+              onClick={() => setShowSettings(false)}
+            >Done</button>
           </div>
         </div>
       )}
