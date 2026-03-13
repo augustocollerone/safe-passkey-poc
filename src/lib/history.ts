@@ -1,5 +1,6 @@
 import { getAddress } from 'viem';
-import { type Token, findTokenByAddress, NATIVE_TOKEN } from './tokens';
+import { type Token, findTokenByAddress, NATIVE_TOKEN, TOKENS } from './tokens';
+import { publicClient } from './relayer';
 
 // Normalized transaction interface
 export interface SafeTransaction {
@@ -389,15 +390,16 @@ export async function fetchTransactionHistory(
       console.warn('Failed to fetch multisig transactions:', multisigTxs.reason);
     }
 
-    // If no transactions found from all endpoints, consider on-chain fallback
-    if (!hasData) {
-      console.log('No transactions found from Safe Transaction Service for:', checksummedAddress);
-      console.log('Consider implementing on-chain event parsing fallback for Transfer events');
-      // TODO: Implement on-chain event parsing via RPC
-      // This would involve:
-      // 1. Get Transfer event logs with Safe address as 'from' or 'to'
-      // 2. Parse the events and convert to SafeTransaction format
-      // 3. Return those transactions
+    // Always attempt on-chain fallback to supplement API results
+    // The Safe Transaction Service is unreliable for custom-deployed Safes on Base Sepolia
+    try {
+      const onChainTxs = await fetchOnChainTransactions(checksummedAddress);
+      transactions.push(...onChainTxs);
+    } catch (err) {
+      console.warn('On-chain fallback failed, using API results only:', err);
+    }
+
+    if (transactions.length === 0) {
       return [];
     }
 
@@ -418,6 +420,152 @@ export async function fetchTransactionHistory(
     console.error('Error fetching transaction history:', error);
     throw error;
   }
+}
+
+// ERC-20 Transfer event signature
+const TRANSFER_EVENT_ABI = {
+  type: 'event',
+  name: 'Transfer',
+  inputs: [
+    { type: 'address', name: 'from', indexed: true },
+    { type: 'address', name: 'to', indexed: true },
+    { type: 'uint256', name: 'value', indexed: false },
+  ],
+} as const;
+
+// Number of recent blocks to scan for on-chain events
+const ON_CHAIN_BLOCK_RANGE = 5000n;
+
+// Fetch transactions directly from on-chain Transfer events
+async function fetchOnChainTransactions(
+  safeAddress: `0x${string}`
+): Promise<SafeTransaction[]> {
+  const currentBlock = await publicClient.getBlockNumber();
+  const fromBlock = currentBlock > ON_CHAIN_BLOCK_RANGE ? currentBlock - ON_CHAIN_BLOCK_RANGE : 0n;
+
+  // Get ERC-20 token addresses (exclude native ETH)
+  const erc20Tokens = TOKENS.filter(
+    t => t.address !== '0x0000000000000000000000000000000000000000'
+  );
+
+  const transactions: SafeTransaction[] = [];
+
+  // Fetch outgoing and incoming ERC-20 Transfer events in parallel
+  const [outgoingLogs, incomingLogs] = await Promise.all([
+    // Outgoing ERC-20: Transfer events where from = safe
+    publicClient.getLogs({
+      event: TRANSFER_EVENT_ABI,
+      args: { from: safeAddress },
+      address: erc20Tokens.map(t => t.address),
+      fromBlock,
+      toBlock: currentBlock,
+    }),
+    // Incoming ERC-20: Transfer events where to = safe
+    publicClient.getLogs({
+      event: TRANSFER_EVENT_ABI,
+      args: { to: safeAddress },
+      address: erc20Tokens.map(t => t.address),
+      fromBlock,
+      toBlock: currentBlock,
+    }),
+  ]);
+
+  // Cache blocks for timestamp lookups
+  const blockCache = new Map<bigint, bigint>();
+  const getBlockTimestamp = async (blockNumber: bigint): Promise<bigint> => {
+    const cached = blockCache.get(blockNumber);
+    if (cached !== undefined) return cached;
+    const block = await publicClient.getBlock({ blockNumber });
+    blockCache.set(blockNumber, block.timestamp);
+    return block.timestamp;
+  };
+
+  // Collect unique block numbers for batch timestamp fetching
+  const allLogs = [...outgoingLogs, ...incomingLogs];
+  const uniqueBlocks = [...new Set(allLogs.map(l => l.blockNumber))];
+  await Promise.all(uniqueBlocks.map(bn => getBlockTimestamp(bn)));
+
+  // Process outgoing ERC-20 transfers
+  for (const log of outgoingLogs) {
+    if (!log.transactionHash || !log.args.from || !log.args.to || log.args.value === undefined) continue;
+    const token = findTokenByAddress(log.address as `0x${string}`);
+    if (!token) continue;
+
+    const ts = blockCache.get(log.blockNumber) ?? 0n;
+    transactions.push({
+      txHash: log.transactionHash,
+      type: 'send',
+      from: log.args.from as `0x${string}`,
+      to: log.args.to as `0x${string}`,
+      amount: log.args.value,
+      token,
+      timestamp: new Date(Number(ts) * 1000).toISOString(),
+      status: 'confirmed',
+      blockNumber: Number(log.blockNumber),
+      safe: safeAddress,
+      executionDate: new Date(Number(ts) * 1000).toISOString(),
+    });
+  }
+
+  // Process incoming ERC-20 transfers
+  for (const log of incomingLogs) {
+    if (!log.transactionHash || !log.args.from || !log.args.to || log.args.value === undefined) continue;
+    const token = findTokenByAddress(log.address as `0x${string}`);
+    if (!token) continue;
+
+    const ts = blockCache.get(log.blockNumber) ?? 0n;
+    transactions.push({
+      txHash: log.transactionHash,
+      type: 'receive',
+      from: log.args.from as `0x${string}`,
+      to: log.args.to as `0x${string}`,
+      amount: log.args.value,
+      token,
+      timestamp: new Date(Number(ts) * 1000).toISOString(),
+      status: 'confirmed',
+      blockNumber: Number(log.blockNumber),
+      safe: safeAddress,
+      executionDate: new Date(Number(ts) * 1000).toISOString(),
+    });
+  }
+
+  // Check for outgoing native ETH transfers by scanning recent blocks for txs from the Safe
+  // This catches native ETH sends that won't appear in Transfer events
+  // We check a smaller range to avoid excessive RPC calls
+  const ethScanRange = currentBlock > 1000n ? currentBlock - 1000n : 0n;
+  try {
+    // Use eth_getLogs won't work for native transfers, so we check transaction receipts
+    // Instead, scan blocks for transactions from the Safe address
+    // To limit RPC calls, we only check the most recent 100 blocks
+    const ethFromBlock = currentBlock > 100n ? currentBlock - 100n : 0n;
+    for (let bn = currentBlock; bn > ethFromBlock; bn--) {
+      const block = await publicClient.getBlock({ blockNumber: bn, includeTransactions: true });
+      blockCache.set(bn, block.timestamp);
+      for (const tx of block.transactions) {
+        if (typeof tx === 'string') continue;
+        if (tx.from.toLowerCase() === safeAddress.toLowerCase() && tx.value > 0n) {
+          transactions.push({
+            txHash: tx.hash,
+            type: 'send',
+            from: tx.from as `0x${string}`,
+            to: (tx.to || '0x0000000000000000000000000000000000000000') as `0x${string}`,
+            amount: tx.value,
+            token: NATIVE_TOKEN,
+            timestamp: new Date(Number(block.timestamp) * 1000).toISOString(),
+            status: 'confirmed',
+            blockNumber: Number(bn),
+            safe: safeAddress,
+            executionDate: new Date(Number(block.timestamp) * 1000).toISOString(),
+          });
+        }
+      }
+    }
+  } catch (err) {
+    // Native ETH scan is best-effort
+    console.warn('Native ETH block scan failed:', err);
+  }
+
+  return transactions;
 }
 
 // Format relative time (e.g., "2h ago", "3d ago")
