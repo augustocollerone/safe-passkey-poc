@@ -95,7 +95,7 @@ export default function SignerSwitch({ safe, onBack }: Props) {
           
           <div style={{ marginBottom: 16 }}>
             <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Benefits:</h4>
-            <ul style={{ fontSize: 13, color: 'var(--text-secondary)', paddingLeft: 20 }}>
+            <ul style={{ fontSize: 12, color: 'var(--text-secondary)', paddingLeft: 20 }}>
               <li>Private keys never leave the device</li>
               <li>Physical confirmation for transactions</li>
               <li>Protection against malware</li>
@@ -112,14 +112,14 @@ export default function SignerSwitch({ safe, onBack }: Props) {
         </div>
 
         {/* Warning */}
-        <div className="card" style={{ background: '#FEF3C7', border: '1px solid #F59E0B' }}>
+        <div className="card" style={{ background: 'var(--warning-light)', border: '1px solid var(--warning)' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
             <span style={{ fontSize: 16 }}>⚠️</span>
             <div>
               <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 4, color: 'var(--warning-dark)' }}>
                 Important
               </h3>
-              <p style={{ fontSize: 13, color: 'var(--warning-dark)', lineHeight: 1.4 }}>
+              <p style={{ fontSize: 12, color: 'var(--warning-dark)', lineHeight: 1.4 }}>
                 Switching signers will replace your current Passkey with a Ledger device. 
                 Make sure you have access to your Ledger and remember your PIN before proceeding.
               </p>

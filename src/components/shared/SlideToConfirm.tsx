@@ -110,7 +110,7 @@ export default function SlideToConfirm({ onConfirm, label = 'Slide to approve', 
           onMouseDown={onMouseDown}
           onTouchStart={onTouchStart}
         >
-          <span style={{ fontSize: 22, color: 'var(--text-primary)' }}>→</span>
+          <span style={{ fontSize: 24, color: 'var(--text-primary)' }}>→</span>
         </div>
       ) : state === 'confirming' ? (
         <div style={{ position: 'absolute', top: (trackHeight - thumbSize) / 2, right: 6, width: thumbSize, height: thumbSize, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>

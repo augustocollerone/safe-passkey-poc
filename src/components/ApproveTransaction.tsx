@@ -158,8 +158,8 @@ export default function ApproveTransaction({ encodedData }: Props) {
           <span className="badge badge-success">{sigCount} / {tx.threshold}</span>
         </div>
         {/* Progress bar */}
-        <div style={{ height: 6, background: 'var(--border)', borderRadius: 3, marginBottom: 12 }}>
-          <div style={{ height: '100%', width: `${Math.min(100, (sigCount / tx.threshold) * 100)}%`, background: 'var(--success)', borderRadius: 3, transition: 'width 0.3s' }} />
+        <div style={{ height: 6, background: 'var(--border)', borderRadius: 'var(--radius-sm)', marginBottom: 12 }}>
+          <div style={{ height: '100%', width: `${Math.min(100, (sigCount / tx.threshold) * 100)}%`, background: 'var(--success)', borderRadius: 'var(--radius-sm)', transition: 'width 0.3s' }} />
         </div>
         {tx.signatures.map(s => (
           <div key={s.signer} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>

@@ -211,19 +211,18 @@ export default function WalletDashboard({ safe, onDisconnect, onSafeChanged }: P
       <div className="card-gradient" style={{ textAlign: 'center' }}>
         <p style={{ fontSize: 14, opacity: 0.8, marginBottom: 4 }}>Total Balance</p>
         <p style={{ fontSize: 40, fontWeight: 700, lineHeight: 1.1 }}>{formatEther(balance)} ETH</p>
-        <p style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>Base Sepolia</p>
       </div>
 
       {/* Action Buttons */}
       <div className="action-buttons">
         <button className="btn btn-primary flex-1" onClick={() => setView('send')}>
-          ↑ Send
+          Send
         </button>
         <button className="btn btn-secondary flex-1" onClick={() => setView('receive')}>
-          ↓ Receive
+          Receive
         </button>
         <button className="btn btn-secondary flex-1" onClick={() => setView('swap')}>
-          ↔ Swap
+          Swap
         </button>
       </div>
 
@@ -276,7 +275,7 @@ export default function WalletDashboard({ safe, onDisconnect, onSafeChanged }: P
           {recentTxs.length > 0 && (
             <button 
               className="btn btn-ghost btn-sm" 
-              style={{ width: 'auto', fontSize: 13, padding: '6px 12px', color: 'var(--primary-from)' }}
+              style={{ width: 'auto', fontSize: 12, padding: '6px 12px', color: 'var(--primary-from)' }}
               onClick={() => setView('history')}
             >
               View All →
@@ -303,7 +302,7 @@ export default function WalletDashboard({ safe, onDisconnect, onSafeChanged }: P
       {/* Safe address */}
       <div style={{ textAlign: 'center' }}>
         <a href={`${EXPLORER}/address/${safe.address}`} target="_blank" rel="noreferrer" className="text-muted text-xs">
-          {shortAddr(safe.address)} ↗
+          View on Explorer ↗
         </a>
       </div>
     </div>
@@ -406,7 +405,6 @@ export default function WalletDashboard({ safe, onDisconnect, onSafeChanged }: P
       </div>
 
       <div className="card" style={{ textAlign: 'center' }}>
-        <p className="text-secondary text-sm mb-8">Send Base Sepolia ETH to this address</p>
         <canvas ref={receiveQrRef} style={{ marginBottom: 16 }} />
         <div className="addr-chip" style={{ marginBottom: 12 }}>{safe.address}</div>
         <button className="btn btn-primary btn-sm" onClick={() => copy(safe.address)}>📋 Copy Address</button>

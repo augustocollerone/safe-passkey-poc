@@ -164,7 +164,7 @@ body {
 /* ---- Address chip ---- */
 .addr-chip {
   font-family: 'SF Mono', SFMono-Regular, ui-monospace, monospace;
-  font-size: 13px;
+  font-size: 12px;
   background: var(--bg);
   padding: 10px 14px;
   border-radius: var(--radius-lg);
@@ -494,7 +494,7 @@ body {
 }
 
 .settings-description {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-muted);
   margin-top: 2px;
 }
@@ -533,7 +533,7 @@ body {
 }
 
 .tx-preview-arrow {
-  font-size: 18px;
+  font-size: 20px;
   color: var(--text-muted);
 }
 
@@ -651,7 +651,7 @@ body {
   
   .filter-chip {
     padding: 6px 10px;
-    font-size: 13px;
+    font-size: 12px;
   }
 }
 /* ---- Invite Signer Wizard Styles ---- */
@@ -728,7 +728,7 @@ body {
 }
 
 .wizard-step-title {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   margin-bottom: 2px;
   color: var(--text-primary);
@@ -739,7 +739,7 @@ body {
 }
 
 .wizard-step-desc {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-muted);
   margin: 0;
 }
@@ -927,7 +927,7 @@ body {
   padding: 16px;
   border: 1.5px solid var(--border);
   border-radius: var(--radius-lg);
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 600;
   font-family: inherit;
   background: var(--card-bg);
@@ -951,7 +951,7 @@ body {
   background: var(--bg);
   border: 1.5px solid var(--border);
   border-radius: var(--radius-lg);
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 600;
   color: var(--text-primary);
   text-align: right;
@@ -967,7 +967,7 @@ body {
   border-radius: 50%;
   background: var(--card-bg);
   border: 2px solid var(--border);
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 600;
   color: var(--text-primary);
   cursor: pointer;

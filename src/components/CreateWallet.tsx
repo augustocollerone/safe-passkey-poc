@@ -69,7 +69,7 @@ export default function CreateWallet({ onSafeCreated }: Props) {
       {/* Hero */}
       <div>
         <div style={{ fontSize: 64, marginBottom: 16 }}>🔐</div>
-        <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8 }}>Passkey Wallet</h1>
+        <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8 }}>Passkey Wallet</h1>
         <p className="text-secondary" style={{ fontSize: 14 }}>
           Secured by Face ID • Powered by Safe
         </p>

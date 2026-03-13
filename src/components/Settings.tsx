@@ -263,7 +263,7 @@ export default function Settings({ safe, onBack }: Props) {
           <span style={{ fontSize: 16 }}>🛡️</span>
           <div>
             <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 4, color: 'var(--success-dark)' }}>Safety Note</h3>
-            <p style={{ fontSize: 13, color: 'var(--success-dark)', lineHeight: 1.4 }}>
+            <p style={{ fontSize: 12, color: 'var(--success-dark)', lineHeight: 1.4 }}>
               • Cannot set threshold higher than number of owners<br/>
               • Cannot remove the last owner<br/>
               • Changes require threshold signatures to execute

@@ -393,7 +393,7 @@ export default function InviteSigner({ safe, onBack }: Props) {
 
             <div className="card info-card">
               <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Signer Address</h4>
-              <div className="addr-chip" style={{ fontFamily: 'monospace', fontSize: 13, marginBottom: 12 }}>
+              <div className="addr-chip" style={{ fontFamily: 'monospace', fontSize: 12, marginBottom: 12 }}>
                 {newSignerAddress}
               </div>
               <p className="text-secondary text-xs">

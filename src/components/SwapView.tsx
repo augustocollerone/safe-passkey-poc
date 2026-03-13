@@ -172,7 +172,7 @@ export default function SwapView({ safe, onBack }: Props) {
                 <button
                   key={value}
                   className={`btn btn-sm ${slippage === value ? 'btn-primary' : 'btn-secondary'}`}
-                  style={{ flex: 1, padding: '8px 12px', fontSize: 13 }}
+                  style={{ flex: 1, padding: '8px 12px', fontSize: 12 }}
                   onClick={() => setSlippage(value)}
                 >
                   {value}%

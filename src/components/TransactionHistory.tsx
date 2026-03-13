@@ -119,7 +119,7 @@ export default function TransactionHistory({ safeAddress, onBack, onResend }: Pr
       ) : error ? (
         <div className="card">
           <div className="tx-error">
-            <span style={{ fontSize: 18, marginBottom: 8 }}>⚠️</span>
+            <span style={{ fontSize: 20, marginBottom: 8 }}>⚠️</span>
             <p style={{ color: 'var(--danger)', fontWeight: 600, marginBottom: 4 }}>
               Failed to load transactions
             </p>
