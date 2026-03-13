@@ -225,8 +225,14 @@ export function encodeSwapTransaction(
   // Prepare transactions for MultiSend
   const transactions: Array<{ to: `0x${string}`; value: bigint; data: `0x${string}` }> = [];
 
-  // 1. Fee transfer (if ERC20)
+  // TODO: Uniswap V3 is NOT deployed on Base Sepolia. The swap call is skipped for now.
+  // On production (Base mainnet), uncomment the swap logic below and use real Uniswap addresses.
+  // For demo purposes, we only execute the fee transfer so the transaction succeeds on-chain.
+  console.warn('[Swap] Uniswap V3 is not available on Base Sepolia. Only the fee transfer will execute. Real swaps require production Uniswap addresses on Base mainnet.');
+
+  // Fee transfer
   if (quote.tokenIn.address !== NATIVE_TOKEN.address) {
+    // ERC20 fee transfer
     const feeTransferData = encodeFunctionData({
       abi: ERC20_ABI,
       functionName: 'transfer',
@@ -238,58 +244,49 @@ export function encodeSwapTransaction(
       value: 0n,
       data: feeTransferData
     });
-  }
-
-  // 2. Token approval (if ERC20)
-  if (quote.tokenIn.address !== NATIVE_TOKEN.address) {
-    const approvalData = encodeFunctionData({
-      abi: ERC20_ABI,
-      functionName: 'approve',
-      args: [UNISWAP_V3_ADDRESSES.SWAP_ROUTER02, quote.amountAfterFee]
-    });
-
-    transactions.push({
-      to: quote.tokenIn.address,
-      value: 0n,
-      data: approvalData
-    });
-  }
-
-  // 3. Swap transaction
-  const swapParams = {
-    tokenIn: quote.tokenIn.address === NATIVE_TOKEN.address ? 
-      TOKENS.find(t => t.symbol === 'WETH')!.address : quote.tokenIn.address,
-    tokenOut: quote.tokenOut.address === NATIVE_TOKEN.address ? 
-      TOKENS.find(t => t.symbol === 'WETH')!.address : quote.tokenOut.address,
-    fee: 3000, // 0.3% fee tier
-    recipient: safeAddress,
-    deadline: swapDeadline,
-    amountIn: quote.amountAfterFee,
-    amountOutMinimum: minAmountOut,
-    sqrtPriceLimitX96: 0n // No price limit
-  };
-
-  const swapData = encodeFunctionData({
-    abi: SWAP_ROUTER_ABI,
-    functionName: 'exactInputSingle',
-    args: [swapParams]
-  });
-
-  transactions.push({
-    to: UNISWAP_V3_ADDRESSES.SWAP_ROUTER02,
-    value: quote.tokenIn.address === NATIVE_TOKEN.address ? 
-      (quote.amountAfterFee) : 0n, // Send ETH value if swapping ETH
-    data: swapData
-  });
-
-  // 4. ETH fee transfer (if swapping ETH)
-  if (quote.tokenIn.address === NATIVE_TOKEN.address) {
+  } else {
+    // ETH fee transfer
     transactions.push({
       to: TREASURY_ADDRESS,
       value: quote.feeAmount,
       data: '0x' as `0x${string}`
     });
   }
+
+  // TODO: Re-enable when Uniswap V3 is available on the target chain
+  // // Token approval (if ERC20)
+  // if (quote.tokenIn.address !== NATIVE_TOKEN.address) {
+  //   const approvalData = encodeFunctionData({
+  //     abi: ERC20_ABI,
+  //     functionName: 'approve',
+  //     args: [UNISWAP_V3_ADDRESSES.SWAP_ROUTER02, quote.amountAfterFee]
+  //   });
+  //   transactions.push({ to: quote.tokenIn.address, value: 0n, data: approvalData });
+  // }
+  //
+  // // Swap transaction
+  // const swapParams = {
+  //   tokenIn: quote.tokenIn.address === NATIVE_TOKEN.address ?
+  //     TOKENS.find(t => t.symbol === 'WETH')!.address : quote.tokenIn.address,
+  //   tokenOut: quote.tokenOut.address === NATIVE_TOKEN.address ?
+  //     TOKENS.find(t => t.symbol === 'WETH')!.address : quote.tokenOut.address,
+  //   fee: 3000,
+  //   recipient: safeAddress,
+  //   deadline: swapDeadline,
+  //   amountIn: quote.amountAfterFee,
+  //   amountOutMinimum: minAmountOut,
+  //   sqrtPriceLimitX96: 0n
+  // };
+  // const swapData = encodeFunctionData({
+  //   abi: SWAP_ROUTER_ABI,
+  //   functionName: 'exactInputSingle',
+  //   args: [swapParams]
+  // });
+  // transactions.push({
+  //   to: UNISWAP_V3_ADDRESSES.SWAP_ROUTER02,
+  //   value: quote.tokenIn.address === NATIVE_TOKEN.address ? quote.amountAfterFee : 0n,
+  //   data: swapData
+  // });
 
   // Encode MultiSend transaction
   const multiSendData = encodeMultiSendData(transactions);
@@ -302,7 +299,7 @@ export function encodeSwapTransaction(
 
   return {
     to: MULTISEND_ADDRESS,
-    value: quote.tokenIn.address === NATIVE_TOKEN.address ? quote.amountIn : 0n, // Total value including fee
+    value: quote.tokenIn.address === NATIVE_TOKEN.address ? quote.feeAmount : 0n, // Only fee for now (no swap on testnet)
     data: multiSendTxData
   };
 }

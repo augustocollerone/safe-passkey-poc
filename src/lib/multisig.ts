@@ -13,6 +13,7 @@ export interface ShareableTransaction {
     data: string; // packed EIP-1271 sig for this signer (hex)
   }>;
   threshold: number;
+  operation?: number; // 0 = CALL (default), 1 = DELEGATECALL (for MultiSend)
 }
 
 export interface SignatureComponents {

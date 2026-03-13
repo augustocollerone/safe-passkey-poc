@@ -87,7 +87,8 @@ export default function SwapView({ safe, onBack }: Props) {
       setSwapStatus('Signing transaction...');
       
       const nonce = await getNonce(safe.address);
-      const safeTxHash = computeSafeTxHash(safe.address, swapTx.to, swapTx.value, swapTx.data, nonce);
+      // MultiSend requires DELEGATECALL (operation=1)
+      const safeTxHash = computeSafeTxHash(safe.address, swapTx.to, swapTx.value, swapTx.data, nonce, 1);
       const hashBytes = new Uint8Array(32);
       for (let i = 0; i < 32; i++) hashBytes[i] = parseInt(safeTxHash.slice(2 + i * 2, 4 + i * 2), 16);
 
@@ -97,7 +98,7 @@ export default function SwapView({ safe, onBack }: Props) {
       if (threshold <= 1) {
         setSwapStatus('Executing swap...');
         const packed = packSafeSignature(localOwner.address, sig.authenticatorData, sig.clientDataJSON, sig.challengeOffset, sig.r, sig.s);
-        const hash = await execTransaction(safe.address, swapTx.to, swapTx.value, swapTx.data, packed);
+        const hash = await execTransaction(safe.address, swapTx.to, swapTx.value, swapTx.data, packed, 1);
         setTxHash(hash);
         setSwapStatus('Swap completed! ✅');
       } else {
@@ -111,6 +112,7 @@ export default function SwapView({ safe, onBack }: Props) {
           chainId: safe.chainId,
           signatures: [{ signer: localOwner.address, data: sigData }],
           threshold,
+          operation: 1, // DELEGATECALL for MultiSend
         };
         const encoded = encodeShareableTransaction(shareable);
         const url = `${window.location.origin}${window.location.pathname}#/sign?data=${encoded}`;

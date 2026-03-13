@@ -166,7 +166,8 @@ export async function execTransaction(
   to: `0x${string}`,
   value: bigint,
   data: Hex,
-  signatures: Hex
+  signatures: Hex,
+  operation: number = 0
 ): Promise<`0x${string}`> {
   const ZERO = '0x0000000000000000000000000000000000000000' as const;
 
@@ -174,7 +175,7 @@ export async function execTransaction(
     address: safeAddress,
     abi: SAFE_ABI,
     functionName: 'execTransaction',
-    args: [to, value, data, 0, 0n, 0n, 0n, ZERO, ZERO, signatures],
+    args: [to, value, data, operation, 0n, 0n, 0n, ZERO, ZERO, signatures],
   });
 
   await publicClient.waitForTransactionReceipt({ hash: txHash });

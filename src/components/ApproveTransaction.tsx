@@ -74,7 +74,8 @@ export default function ApproveTransaction({ encodedData }: Props) {
     try {
       const safeTxHash = computeSafeTxHash(
         tx.safe as `0x${string}`, tx.to as `0x${string}`,
-        BigInt(tx.value), tx.data as `0x${string}`, BigInt(tx.nonce)
+        BigInt(tx.value), tx.data as `0x${string}`, BigInt(tx.nonce),
+        tx.operation ?? 0
       );
       const hashBytes = new Uint8Array(32);
       for (let i = 0; i < 32; i++) hashBytes[i] = parseInt(safeTxHash.slice(2 + i * 2, 4 + i * 2), 16);
@@ -109,7 +110,8 @@ export default function ApproveTransaction({ encodedData }: Props) {
       const packed = packFromShareable(tx.signatures);
       const hash = await execTransaction(
         tx.safe as `0x${string}`, tx.to as `0x${string}`,
-        BigInt(tx.value), tx.data as `0x${string}`, packed
+        BigInt(tx.value), tx.data as `0x${string}`, packed,
+        tx.operation ?? 0
       );
       setTxResult(hash);
       setStatus('Transaction executed ✅');
@@ -175,7 +177,8 @@ export default function ApproveTransaction({ encodedData }: Props) {
             if (!localCredentialId || !localOwner || !tx) return;
             const safeTxHash = computeSafeTxHash(
               tx.safe as `0x${string}`, tx.to as `0x${string}`,
-              BigInt(tx.value), tx.data as `0x${string}`, BigInt(tx.nonce)
+              BigInt(tx.value), tx.data as `0x${string}`, BigInt(tx.nonce),
+              tx.operation ?? 0
             );
             const hashBytes = new Uint8Array(32);
             for (let i = 0; i < 32; i++) hashBytes[i] = parseInt(safeTxHash.slice(2 + i * 2, 4 + i * 2), 16);
@@ -193,7 +196,8 @@ export default function ApproveTransaction({ encodedData }: Props) {
             const packed = packFromShareable(updatedTx.signatures);
             const hash = await execTransaction(
               tx.safe as `0x${string}`, tx.to as `0x${string}`,
-              BigInt(tx.value), tx.data as `0x${string}`, packed
+              BigInt(tx.value), tx.data as `0x${string}`, packed,
+              tx.operation ?? 0
             );
             setTxResult(hash);
             setStatus('Transaction executed ✅');

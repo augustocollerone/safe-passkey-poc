@@ -27,7 +27,8 @@ export function computeSafeTxHash(
   to: `0x${string}`,
   value: bigint,
   data: Hex,
-  nonce: bigint
+  nonce: bigint,
+  operation: number = 0
 ): Hex {
   const domainSeparator = computeDomainSeparator(84532n, safeAddress);
 
@@ -51,7 +52,7 @@ export function computeSafeTxHash(
         to,
         value,
         keccak256(data),
-        0,    // operation (CALL)
+        operation, // 0 = CALL, 1 = DELEGATECALL
         0n,   // safeTxGas
         0n,   // baseGas
         0n,   // gasPrice
