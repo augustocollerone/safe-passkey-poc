@@ -50,6 +50,8 @@ T11: Ledger Integration (real) ──── depends on T8
 ### Paused / Deferred
 - ~~**T7**: Chain Abstraction~~ ⏸️
 - ~~**T10**: ENS Subdomains~~ ⏸️
+- ~~**T11**: Ledger Integration~~ ⏸️
+- ~~**T11b**: Ledger Tx Signing + Address Selector~~ ⏸️
 
 ---
 
