@@ -1,6 +1,14 @@
 import { getAddress } from 'viem';
 import { type Token, findTokenByAddress, NATIVE_TOKEN, TOKENS } from './tokens';
 import { publicClient } from './relayer';
+import { CHAIN_ID } from './chain';
+
+// Safe Transaction Service URL — only available for known networks
+const SAFE_TX_SERVICE_URLS: Record<number, string> = {
+  84532: 'https://safe-transaction-base-sepolia.safe.global',
+  8453: 'https://safe-transaction-base.safe.global',
+};
+const SAFE_TX_SERVICE_URL = SAFE_TX_SERVICE_URLS[CHAIN_ID] ?? null;
 
 // Normalized transaction interface
 export interface SafeTransaction {
@@ -306,7 +314,11 @@ export async function fetchTransactionHistory(
     // Ensure the Safe address is checksummed
     const checksummedAddress = getAddress(safeAddress);
     
-    const baseUrl = 'https://safe-transaction-base-sepolia.safe.global';
+    if (!SAFE_TX_SERVICE_URL) {
+      // No Safe Transaction Service for this chain (e.g. CoBuilders Chain)
+      return [];
+    }
+    const baseUrl = SAFE_TX_SERVICE_URL;
     
     // Fetch all three transaction sources
     const [outgoingTxs, incomingTransfers, multisigTxs] = await Promise.allSettled([
@@ -757,7 +769,8 @@ export interface PendingApproval {
 }
 
 export async function fetchPendingApprovals(safeAddress: string): Promise<PendingApproval[]> {
-  const baseUrl = 'https://safe-transaction-base-sepolia.safe.global';
+  if (!SAFE_TX_SERVICE_URL) return [];
+  const baseUrl = SAFE_TX_SERVICE_URL;
   try {
     const response = await fetch(
       `${baseUrl}/api/v1/safes/${safeAddress}/multisig-transactions/?executed=false&limit=20`
