@@ -9,6 +9,7 @@ import { formatTokenAmount } from '../lib/tokens';
 
 interface Props {
   transaction: SafeTransaction;
+  onResend?: (transaction: SafeTransaction) => void;
 }
 
 // Truncate address for display
@@ -32,7 +33,7 @@ function getTokenIcon(symbol: string): string {
   }
 }
 
-export default function TransactionItem({ transaction }: Props) {
+export default function TransactionItem({ transaction, onResend }: Props) {
   const { txHash, type, to, from, amount, token, timestamp, status, safe } = transaction;
   
   // Determine the counterparty address (the other party in the transaction)
@@ -125,6 +126,32 @@ export default function TransactionItem({ transaction }: Props) {
           </div>
         )}
       </div>
+      
+      {/* Send again button for outgoing transactions */}
+      {type === 'send' && status === 'confirmed' && onResend && (
+        <div style={{ 
+          marginTop: '12px', 
+          paddingTop: '12px', 
+          borderTop: '1px solid rgba(226, 232, 240, 0.5)' 
+        }}>
+          <button 
+            className="btn btn-ghost btn-sm" 
+            style={{ 
+              fontSize: '13px', 
+              padding: '8px 12px',
+              height: 'auto',
+              color: 'var(--text-secondary)',
+              background: 'rgba(248, 250, 252, 0.8)',
+              border: '1px solid rgba(226, 232, 240, 0.8)',
+              borderRadius: '8px'
+            }}
+            onClick={() => onResend(transaction)}
+          >
+            <span style={{ fontSize: '11px' }}>↻</span>
+            <span>Send again</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }

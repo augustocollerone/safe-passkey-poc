@@ -1,5 +1,6 @@
 import { getAddress } from 'viem';
-import { type Token, findTokenByAddress, NATIVE_TOKEN } from './tokens';
+import { type Token, findTokenByAddress, NATIVE_TOKEN, TOKENS } from './tokens';
+import { publicClient } from './relayer';
 
 // Normalized transaction interface
 export interface SafeTransaction {
@@ -292,8 +293,8 @@ export async function fetchTransactionHistory(
     
     const baseUrl = 'https://safe-transaction-base-sepolia.safe.global';
     
-    // Fetch both outgoing transactions and incoming transfers
-    const [outgoingTxs, incomingTransfers] = await Promise.allSettled([
+    // Fetch all three transaction sources
+    const [outgoingTxs, incomingTransfers, multisigTxs] = await Promise.allSettled([
       // Fetch outgoing transactions
       fetch(`${baseUrl}/api/v1/safes/${checksummedAddress}/all-transactions/?limit=${limit}`, {
         method: 'GET',
@@ -309,20 +310,32 @@ export async function fetchTransactionHistory(
           'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
+      }),
+      // Fetch executed multisig transactions (specifically for outgoing transactions)
+      fetch(`${baseUrl}/api/v1/safes/${checksummedAddress}/multisig-transactions/?limit=${limit}&executed=true`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
       })
     ]);
 
     const transactions: SafeTransaction[] = [];
+    let hasData = false;
 
     // Process outgoing transactions
     if (outgoingTxs.status === 'fulfilled') {
       const response = outgoingTxs.value;
       if (response.ok) {
         const data: SafeApiResponse = await response.json();
-        for (const tx of data.results) {
-          const normalized = normalizeTransaction(tx, checksummedAddress);
-          if (normalized) {
-            transactions.push(normalized);
+        if (data.results.length > 0) {
+          hasData = true;
+          for (const tx of data.results) {
+            const normalized = normalizeTransaction(tx, checksummedAddress);
+            if (normalized) {
+              transactions.push(normalized);
+            }
           }
         }
       } else if (response.status !== 404 && response.status !== 422) {
@@ -338,10 +351,13 @@ export async function fetchTransactionHistory(
       const response = incomingTransfers.value;
       if (response.ok) {
         const data: SafeApiIncomingTransfersResponse = await response.json();
-        for (const transfer of data.results) {
-          const normalized = normalizeIncomingTransfer(transfer, checksummedAddress);
-          if (normalized) {
-            transactions.push(normalized);
+        if (data.results.length > 0) {
+          hasData = true;
+          for (const transfer of data.results) {
+            const normalized = normalizeIncomingTransfer(transfer, checksummedAddress);
+            if (normalized) {
+              transactions.push(normalized);
+            }
           }
         }
       } else if (response.status !== 404 && response.status !== 422) {
@@ -352,13 +368,46 @@ export async function fetchTransactionHistory(
       console.warn('Failed to fetch incoming transfers:', incomingTransfers.reason);
     }
 
-    // If no transactions found, return empty array (graceful handling for new Safes)
+    // Process executed multisig transactions
+    if (multisigTxs.status === 'fulfilled') {
+      const response = multisigTxs.value;
+      if (response.ok) {
+        const data: SafeApiResponse = await response.json();
+        if (data.results.length > 0) {
+          hasData = true;
+          for (const tx of data.results) {
+            const normalized = normalizeTransaction(tx, checksummedAddress);
+            if (normalized) {
+              transactions.push(normalized);
+            }
+          }
+        }
+      } else if (response.status !== 404 && response.status !== 422) {
+        // Log non-404/422 errors but continue
+        console.warn(`Error fetching multisig transactions (${response.status}):`, response.statusText);
+      }
+    } else {
+      console.warn('Failed to fetch multisig transactions:', multisigTxs.reason);
+    }
+
+    // Always attempt on-chain fallback to supplement API results
+    // The Safe Transaction Service is unreliable for custom-deployed Safes on Base Sepolia
+    try {
+      const onChainTxs = await fetchOnChainTransactions(checksummedAddress);
+      transactions.push(...onChainTxs);
+    } catch (err) {
+      console.warn('On-chain fallback failed, using API results only:', err);
+    }
+
+    // Merge locally cached sent transactions (always reliable)
+    const localTxs = getLocalTransactions(checksummedAddress);
+    transactions.push(...localTxs);
+
     if (transactions.length === 0) {
-      console.log('No transactions found for Safe:', checksummedAddress);
       return [];
     }
 
-    // Deduplicate by txHash (all-transactions may already include some incoming transfers)
+    // Deduplicate by txHash (endpoints may have overlapping transactions)
     const seen = new Set<string>();
     const deduplicated = transactions.filter(tx => {
       if (seen.has(tx.txHash)) return false;
@@ -374,6 +423,183 @@ export async function fetchTransactionHistory(
   } catch (error) {
     console.error('Error fetching transaction history:', error);
     throw error;
+  }
+}
+
+// ERC-20 Transfer event signature
+const TRANSFER_EVENT_ABI = {
+  type: 'event',
+  name: 'Transfer',
+  inputs: [
+    { type: 'address', name: 'from', indexed: true },
+    { type: 'address', name: 'to', indexed: true },
+    { type: 'uint256', name: 'value', indexed: false },
+  ],
+} as const;
+
+// Number of recent blocks to scan for on-chain events
+const ON_CHAIN_BLOCK_RANGE = 2000n;
+
+// Fetch transactions directly from on-chain Transfer events
+async function fetchOnChainTransactions(
+  safeAddress: `0x${string}`
+): Promise<SafeTransaction[]> {
+  const currentBlock = await publicClient.getBlockNumber();
+  const fromBlock = currentBlock > ON_CHAIN_BLOCK_RANGE ? currentBlock - ON_CHAIN_BLOCK_RANGE : 0n;
+
+  // Get ERC-20 token addresses (exclude native ETH)
+  const erc20Tokens = TOKENS.filter(
+    t => t.address !== '0x0000000000000000000000000000000000000000'
+  );
+
+  const transactions: SafeTransaction[] = [];
+
+  // Fetch outgoing and incoming ERC-20 Transfer events in parallel
+  const [outgoingLogs, incomingLogs] = await Promise.all([
+    // Outgoing ERC-20: Transfer events where from = safe
+    publicClient.getLogs({
+      event: TRANSFER_EVENT_ABI,
+      args: { from: safeAddress },
+      address: erc20Tokens.map(t => t.address),
+      fromBlock,
+      toBlock: currentBlock,
+    }),
+    // Incoming ERC-20: Transfer events where to = safe
+    publicClient.getLogs({
+      event: TRANSFER_EVENT_ABI,
+      args: { to: safeAddress },
+      address: erc20Tokens.map(t => t.address),
+      fromBlock,
+      toBlock: currentBlock,
+    }),
+  ]);
+
+  // Cache blocks for timestamp lookups
+  const blockCache = new Map<bigint, bigint>();
+  const getBlockTimestamp = async (blockNumber: bigint): Promise<bigint> => {
+    const cached = blockCache.get(blockNumber);
+    if (cached !== undefined) return cached;
+    const block = await publicClient.getBlock({ blockNumber });
+    blockCache.set(blockNumber, block.timestamp);
+    return block.timestamp;
+  };
+
+  // Collect unique block numbers for batch timestamp fetching
+  const allLogs = [...outgoingLogs, ...incomingLogs];
+  const uniqueBlocks = [...new Set(allLogs.map(l => l.blockNumber))];
+  await Promise.all(uniqueBlocks.map(bn => getBlockTimestamp(bn)));
+
+  // Process outgoing ERC-20 transfers
+  for (const log of outgoingLogs) {
+    if (!log.transactionHash || !log.args.from || !log.args.to || log.args.value === undefined) continue;
+    const token = findTokenByAddress(log.address as `0x${string}`);
+    if (!token) continue;
+
+    const ts = blockCache.get(log.blockNumber) ?? 0n;
+    transactions.push({
+      txHash: log.transactionHash,
+      type: 'send',
+      from: log.args.from as `0x${string}`,
+      to: log.args.to as `0x${string}`,
+      amount: log.args.value,
+      token,
+      timestamp: new Date(Number(ts) * 1000).toISOString(),
+      status: 'confirmed',
+      blockNumber: Number(log.blockNumber),
+      safe: safeAddress,
+      executionDate: new Date(Number(ts) * 1000).toISOString(),
+    });
+  }
+
+  // Process incoming ERC-20 transfers
+  for (const log of incomingLogs) {
+    if (!log.transactionHash || !log.args.from || !log.args.to || log.args.value === undefined) continue;
+    const token = findTokenByAddress(log.address as `0x${string}`);
+    if (!token) continue;
+
+    const ts = blockCache.get(log.blockNumber) ?? 0n;
+    transactions.push({
+      txHash: log.transactionHash,
+      type: 'receive',
+      from: log.args.from as `0x${string}`,
+      to: log.args.to as `0x${string}`,
+      amount: log.args.value,
+      token,
+      timestamp: new Date(Number(ts) * 1000).toISOString(),
+      status: 'confirmed',
+      blockNumber: Number(log.blockNumber),
+      safe: safeAddress,
+      executionDate: new Date(Number(ts) * 1000).toISOString(),
+    });
+  }
+
+  // NOTE: Native ETH outgoing from a Safe can't be detected on-chain by scanning blocks
+  // because the tx.from is the relayer (EOA), not the Safe (contract).
+  // Native ETH leaves the Safe as an internal transaction within execTransaction().
+  // We rely on localStorage cache (cacheLocalTransaction) for outgoing native ETH visibility.
+
+  return transactions;
+}
+
+// ── Local transaction cache ──
+// Safe Transaction Service is unreliable for custom-deployed Safes.
+// We cache sent transactions in localStorage so they appear in history immediately.
+
+const LOCAL_TX_KEY = 'simply_sent_transactions';
+
+interface LocalTxRecord {
+  txHash: string;
+  safeAddress: string;
+  to: string;
+  amount: string; // stringified bigint
+  token: Token;
+  timestamp: string;
+}
+
+export function cacheLocalTransaction(
+  safeAddress: `0x${string}`,
+  txHash: string,
+  to: `0x${string}`,
+  amount: bigint,
+  token: Token
+): void {
+  try {
+    const existing: LocalTxRecord[] = JSON.parse(localStorage.getItem(LOCAL_TX_KEY) || '[]');
+    existing.push({
+      txHash,
+      safeAddress,
+      to,
+      amount: amount.toString(),
+      token,
+      timestamp: new Date().toISOString(),
+    });
+    // Keep last 100 records
+    if (existing.length > 100) existing.splice(0, existing.length - 100);
+    localStorage.setItem(LOCAL_TX_KEY, JSON.stringify(existing));
+  } catch (e) {
+    console.warn('Failed to cache local transaction:', e);
+  }
+}
+
+function getLocalTransactions(safeAddress: `0x${string}`): SafeTransaction[] {
+  try {
+    const records: LocalTxRecord[] = JSON.parse(localStorage.getItem(LOCAL_TX_KEY) || '[]');
+    return records
+      .filter(r => r.safeAddress.toLowerCase() === safeAddress.toLowerCase())
+      .map(r => ({
+        txHash: r.txHash,
+        type: 'send' as const,
+        to: r.to as `0x${string}`,
+        from: safeAddress,
+        amount: BigInt(r.amount),
+        token: r.token,
+        timestamp: r.timestamp,
+        status: 'confirmed' as const,
+        safe: safeAddress,
+        executionDate: r.timestamp,
+      }));
+  } catch {
+    return [];
   }
 }
 

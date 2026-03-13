@@ -1,0 +1,31 @@
+import { defineConfig, devices } from '@playwright/test';
+import { config } from 'dotenv';
+
+config();
+
+export default defineConfig({
+  testDir: './e2e',
+  fullyParallel: false,
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 1 : 0,
+  workers: 1,
+  reporter: 'html',
+  timeout: 120_000,
+  use: {
+    baseURL: 'http://localhost:5173',
+    trace: 'on-first-retry',
+    viewport: { width: 375, height: 812 },
+  },
+  projects: [
+    {
+      name: 'chromium',
+      use: { ...devices['Pixel 5'] },
+    },
+  ],
+  webServer: {
+    command: 'npm run dev',
+    url: 'http://localhost:5173',
+    reuseExistingServer: !process.env.CI,
+    timeout: 30_000,
+  },
+});

@@ -9,6 +9,7 @@ import SafeSelector from './SafeSelector';
 import TransactionHistory from './TransactionHistory';
 import SwapView from './SwapView';
 import { getNonce, execTransaction, getOwners, getThreshold, encodeAddOwnerWithThreshold, encodeERC20Transfer } from '../lib/safe';
+import { cacheLocalTransaction } from '../lib/history';
 import { computeSafeTxHash, packSafeSignature } from '../lib/encoding';
 import { signWithPasskey } from '../lib/webauthn';
 import { type SavedSafe, saveSafe, clearSafe, base64ToArrayBuffer } from '../lib/storage';
@@ -17,7 +18,8 @@ import {
   encodeShareableTransaction,
   packSingleSignerData,
 } from '../lib/multisig';
-import { NATIVE_TOKEN, type Token } from '../lib/tokens';
+import { NATIVE_TOKEN, type Token, formatTokenAmount } from '../lib/tokens';
+import { type SafeTransaction } from '../lib/history';
 
 type View = 'home' | 'send' | 'receive' | 'add-owner' | 'history' | 'swap';
 
@@ -163,6 +165,10 @@ export default function WalletDashboard({ safe, onDisconnect, onSafeChanged }: P
         const packed = packSafeSignature(localOwner.address, sig.authenticatorData, sig.clientDataJSON, sig.challengeOffset, sig.r, sig.s);
         const hash = await execTransaction(safe.address, to, value, data, packed);
         setTxHash(hash);
+        // Cache locally so it shows in history immediately
+        const sentAmount = selectedToken.address === '0x0000000000000000000000000000000000000000'
+          ? value : parseUnits(sendAmount, selectedToken.decimals);
+        cacheLocalTransaction(safe.address, hash, recipientAddress, sentAmount, selectedToken);
         setSendStatus('Sent! ✅');
       } else {
         const sigData = packSingleSignerData(sig.authenticatorData, clientDataFields, sig.r, sig.s);
@@ -186,6 +192,22 @@ export default function WalletDashboard({ safe, onDisconnect, onSafeChanged }: P
 
   const copy = (text: string) => navigator.clipboard.writeText(text).catch(() => {});
   const share = (url: string) => navigator.share?.({ url }).catch(() => {});
+
+  // Handle resend from transaction history
+  const handleResend = (transaction: SafeTransaction) => {
+    // Pre-fill the send form with transaction data
+    setSendTo(transaction.to);
+    setSendAmount(formatTokenAmount(transaction.amount, transaction.token));
+    setSelectedToken(transaction.token);
+    
+    // Clear any previous status/results
+    setSendStatus('');
+    setTxHash('');
+    setShareUrl('');
+    
+    // Switch to send view
+    setView('send');
+  };
 
   // ── HOME VIEW ──
   if (view === 'home') return (
@@ -424,6 +446,7 @@ export default function WalletDashboard({ safe, onDisconnect, onSafeChanged }: P
     <TransactionHistory 
       safeAddress={safe.address} 
       onBack={() => setView('home')} 
+      onResend={handleResend}
     />
   );
 
