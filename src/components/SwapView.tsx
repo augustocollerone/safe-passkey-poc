@@ -161,13 +161,23 @@ export default function SwapView({ safe, onBack }: Props) {
     setAmountIn(max > 0 ? max.toString() : '');
   };
 
+  const formatTokenAmount = (amount: number, symbol: string): string => {
+    if (isNaN(amount)) return '0';
+    if (amount === 0) return '0';
+    const isStable = ['USDC', 'USDT', 'DAI'].includes(symbol);
+    if (isStable) {
+      return amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    // Crypto: up to 6 decimals, trim trailing zeros
+    if (amount > 0 && amount < 0.000001) return '< 0.000001';
+    const formatted = amount.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 6 });
+    return formatted;
+  };
+
   const formatOutputAmount = (value: string, symbol: string): string => {
     const n = parseFloat(value);
     if (isNaN(n) || n === 0) return '0';
-    const isStable = ['USDC', 'USDT', 'DAI'].includes(symbol);
-    if (isStable) return n.toFixed(2);
-    // ETH/WETH: up to 6 decimals, trim trailing zeros
-    return parseFloat(n.toFixed(6)).toString();
+    return formatTokenAmount(n, symbol);
   };
 
   const formatNumber = (n: number, maxDecimals = 6): string => {
@@ -337,7 +347,7 @@ export default function SwapView({ safe, onBack }: Props) {
             </div>
             <div className="swap-quote-row">
               <span>Service Fee (0.5%)</span>
-              <span>{(() => { const fee = parseFloat(formattedQuote.feeAmount); return fee > 0 && fee < 0.000001 ? '< 0.000001' : fee.toFixed(6); })()} {tokenFrom.symbol}</span>
+              <span>{formatTokenAmount(parseFloat(formattedQuote.feeAmount), tokenFrom.symbol)} {tokenFrom.symbol}</span>
             </div>
             <div className="swap-quote-row">
               <span>Rate variance</span>
@@ -355,7 +365,7 @@ export default function SwapView({ safe, onBack }: Props) {
       {!txHash && threshold <= 1 ? (
         <SlideToConfirm
           label="Slide to swap"
-          disabled={!canSwap}
+          disabled={!amountIn || parseFloat(amountIn) <= 0 || !quote || isLoadingQuote}
           onConfirm={handleSwap}
           testId="swap-slide"
         />
@@ -382,7 +392,7 @@ export default function SwapView({ safe, onBack }: Props) {
           <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
           <p style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Swap Complete!</p>
           <p className="text-secondary" style={{ fontSize: 14, marginBottom: 4 }}>
-            {amountIn} {tokenFrom.symbol} → {formattedQuote ? parseFloat(formattedQuote.amountOut).toFixed(6) : '?'} {tokenTo.symbol}
+            {amountIn} {tokenFrom.symbol} → {formattedQuote ? formatTokenAmount(parseFloat(formattedQuote.amountOut), tokenTo.symbol) : '?'} {tokenTo.symbol}
           </p>
           <a 
             href={`${EXPLORER}/tx/${txHash}`} 

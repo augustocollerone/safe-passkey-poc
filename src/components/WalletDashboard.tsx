@@ -375,7 +375,14 @@ export default function WalletDashboard({ safe, onDisconnect, onSafeChanged }: P
                   <span className="text-muted text-xs">
                     Available: {formatTokenAmount(tb.balance, tb.token)}{tb.usdValue ? ` (${formatUSDValue(tb.usdValue)})` : ''}
                   </span>
-                  <button className="btn btn-ghost btn-sm" style={{ fontSize: 12, padding: '4px 8px', height: 'auto', color: 'var(--primary-from)' }} onClick={() => setSendAmount(tb.formattedBalance)}>
+                  <button className="btn btn-ghost btn-sm" style={{ fontSize: 12, padding: '4px 8px', height: 'auto', color: 'var(--primary-from)' }} onClick={() => {
+                    if (selectedToken.address === '0x0000000000000000000000000000000000000000') {
+                      const max = Math.max(0, parseFloat(tb.formattedBalance) - 0.0005);
+                      setSendAmount(max > 0 ? max.toString() : '');
+                    } else {
+                      setSendAmount(tb.formattedBalance);
+                    }
+                  }}>
                     Max
                   </button>
                 </div>

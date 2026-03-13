@@ -356,6 +356,15 @@ export function getBestRoute(tokenIn: Token, tokenOut: Token): { fee: number; ro
 /**
  * Format swap quote for display
  */
+function formatTokenAmountForRate(amount: number, symbol: string): string {
+  const isStable = ['USDC', 'USDT', 'DAI'].includes(symbol);
+  if (isStable) {
+    return amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  // Crypto: up to 6 decimals, trim trailing zeros via toLocaleString
+  return amount.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 6 });
+}
+
 export function formatSwapQuote(quote: SwapQuote): {
   amountIn: string;
   amountOut: string;
@@ -373,7 +382,7 @@ export function formatSwapQuote(quote: SwapQuote): {
   return {
     amountIn: amountInFormatted,
     amountOut: amountOutFormatted,
-    rate: `1 ${quote.tokenIn.symbol} = ${rate.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 })} ${quote.tokenOut.symbol}`,
+    rate: `1 ${quote.tokenIn.symbol} = ${formatTokenAmountForRate(rate, quote.tokenOut.symbol)} ${quote.tokenOut.symbol}`,
     feeAmount: feeFormatted,
     priceImpact: `${quote.priceImpact.toFixed(2)}%`
   };
