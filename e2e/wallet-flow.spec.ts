@@ -25,6 +25,7 @@ test.describe('Simply Wallet — Full Lifecycle', () => {
       await createBtn.click();
 
       // ── 4. Wait for passkey creation + signer deployment + Safe deployment ──
+      // Wait for either "Done! ✅" or dashboard (transitions fast)
       await expect(page.getByText('Done! ✅').or(page.getByText('Total Balance'))).toBeVisible({ timeout: BLOCKCHAIN_TIMEOUT });
     } else {
       console.log('Wallet already exists, skipping creation');
@@ -49,6 +50,7 @@ test.describe('Simply Wallet — Full Lifecycle', () => {
     console.log(`Funded Safe: tx ${fundTxHash}`);
 
     // ── 7. Wait for balance to update in UI ──
+    // The dashboard polls every 6 seconds, wait for non-zero balance
     await expect(async () => {
       const balanceText = await page.locator('.card-gradient p').nth(1).textContent();
       expect(balanceText).not.toBe('0 ETH');
@@ -113,34 +115,39 @@ test.describe('Simply Wallet — Full Lifecycle', () => {
     if (await viewAllBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
       await viewAllBtn.click({ force: true });
     } else {
+      // Fallback: try History button if it still exists
       await page.getByRole('button', { name: /history/i }).click({ force: true });
     }
     await expect(page.getByText('Transaction History')).toBeVisible({ timeout: 10_000 });
 
     // ── 10. Verify the sent transaction appears ──
+    // Wait for history to load (it fetches from chain)
     await expect(page.locator('.card').filter({ hasText: /send/i }).first()).toBeVisible({
       timeout: 30_000,
     });
     console.log('Transaction visible in history');
 
     // ── 11. Click "Resend" on the transaction ──
+    // Look for a resend/repeat button on the transaction item
     const resendBtn = page.getByRole('button', { name: /resend|repeat|send again/i }).first();
     
     if (await resendBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
       await resendBtn.click();
 
+      // ── 12. Verify resend flow works ──
       // Should pre-fill the send form with previous transaction details
       await expect(page.getByPlaceholder(/recipient/i)).toBeVisible({ timeout: 10_000 });
       const prefilledRecipient = await page.getByPlaceholder(/recipient/i).inputValue();
       expect(prefilledRecipient.toLowerCase()).toBe(recipientAddress.toLowerCase());
       console.log('Resend flow verified — recipient pre-filled');
     } else {
+      // If no resend button, verify we can at least see the transaction details
       console.log('No resend button found — verifying transaction is displayed');
       const txItems = page.locator('.card').filter({ hasText: /0x/ });
       expect(await txItems.count()).toBeGreaterThan(0);
     }
 
-    // ── 12. Test Convert Flow ──
+    // ── 13. Test Convert Flow ──
     // Navigate back to home
     const backFromHistory = page.locator('button').filter({ hasText: '←' });
     if (await backFromHistory.isVisible({ timeout: 2_000 }).catch(() => false)) {
@@ -164,8 +171,10 @@ test.describe('Simply Wallet — Full Lifecycle', () => {
     const swapThumb = swapTrack.locator('.slide-thumb');
     await expect(swapThumb).toBeVisible({ timeout: 5_000 });
 
+    // dragTo moves the element to the target position
     const trackBox = await swapTrack.boundingBox();
     if (trackBox) {
+      // Drag thumb to the right end of the track
       await swapThumb.dragTo(swapTrack, {
         targetPosition: { x: trackBox.width - 20, y: trackBox.height / 2 },
         force: true,

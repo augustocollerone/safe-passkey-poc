@@ -161,6 +161,15 @@ export default function SwapView({ safe, onBack }: Props) {
     setAmountIn(max > 0 ? max.toString() : '');
   };
 
+  const formatOutputAmount = (value: string, symbol: string): string => {
+    const n = parseFloat(value);
+    if (isNaN(n) || n === 0) return '0';
+    const isStable = ['USDC', 'USDT', 'DAI'].includes(symbol);
+    if (isStable) return n.toFixed(2);
+    // ETH/WETH: up to 6 decimals, trim trailing zeros
+    return parseFloat(n.toFixed(6)).toString();
+  };
+
   const formatNumber = (n: number, maxDecimals = 6): string => {
     if (n === 0) return '0';
     return n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: maxDecimals });
@@ -311,7 +320,7 @@ export default function SwapView({ safe, onBack }: Props) {
               {isLoadingQuote ? (
                 <div className="spinner" style={{ width: 16, height: 16 }} />
               ) : formattedQuote ? (
-                <span>{formatNumber(parseFloat(formattedQuote.amountOut))}</span>
+                <span>{formatOutputAmount(formattedQuote.amountOut, tokenTo.symbol)}</span>
               ) : (
                 <span style={{ color: 'var(--text-muted)' }}>0.0</span>
               )}
