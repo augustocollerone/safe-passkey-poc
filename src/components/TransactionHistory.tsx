@@ -6,6 +6,7 @@ import TransactionItem from './TransactionItem';
 interface Props {
   safeAddress: `0x${string}`;
   onBack: () => void;
+  onResend?: (transaction: SafeTransaction) => void;
 }
 
 type FilterOption = 'all' | Token['address'];
@@ -26,7 +27,7 @@ function getTokenIcon(symbol: string): string {
   }
 }
 
-export default function TransactionHistory({ safeAddress, onBack }: Props) {
+export default function TransactionHistory({ safeAddress, onBack, onResend }: Props) {
   const [transactions, setTransactions] = useState<SafeTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
@@ -168,7 +169,7 @@ export default function TransactionHistory({ safeAddress, onBack }: Props) {
       ) : (
         <div className="transaction-list">
           {filteredTransactions.map(tx => (
-            <TransactionItem key={tx.txHash} transaction={tx} />
+            <TransactionItem key={tx.txHash} transaction={tx} onResend={onResend} />
           ))}
           
           {/* Show count */}

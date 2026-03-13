@@ -292,8 +292,8 @@ export async function fetchTransactionHistory(
     
     const baseUrl = 'https://safe-transaction-base-sepolia.safe.global';
     
-    // Fetch both outgoing transactions and incoming transfers
-    const [outgoingTxs, incomingTransfers] = await Promise.allSettled([
+    // Fetch all three transaction sources
+    const [outgoingTxs, incomingTransfers, multisigTxs] = await Promise.allSettled([
       // Fetch outgoing transactions
       fetch(`${baseUrl}/api/v1/safes/${checksummedAddress}/all-transactions/?limit=${limit}`, {
         method: 'GET',
@@ -309,20 +309,32 @@ export async function fetchTransactionHistory(
           'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
+      }),
+      // Fetch executed multisig transactions (specifically for outgoing transactions)
+      fetch(`${baseUrl}/api/v1/safes/${checksummedAddress}/multisig-transactions/?limit=${limit}&executed=true`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
       })
     ]);
 
     const transactions: SafeTransaction[] = [];
+    let hasData = false;
 
     // Process outgoing transactions
     if (outgoingTxs.status === 'fulfilled') {
       const response = outgoingTxs.value;
       if (response.ok) {
         const data: SafeApiResponse = await response.json();
-        for (const tx of data.results) {
-          const normalized = normalizeTransaction(tx, checksummedAddress);
-          if (normalized) {
-            transactions.push(normalized);
+        if (data.results.length > 0) {
+          hasData = true;
+          for (const tx of data.results) {
+            const normalized = normalizeTransaction(tx, checksummedAddress);
+            if (normalized) {
+              transactions.push(normalized);
+            }
           }
         }
       } else if (response.status !== 404 && response.status !== 422) {
@@ -338,10 +350,13 @@ export async function fetchTransactionHistory(
       const response = incomingTransfers.value;
       if (response.ok) {
         const data: SafeApiIncomingTransfersResponse = await response.json();
-        for (const transfer of data.results) {
-          const normalized = normalizeIncomingTransfer(transfer, checksummedAddress);
-          if (normalized) {
-            transactions.push(normalized);
+        if (data.results.length > 0) {
+          hasData = true;
+          for (const transfer of data.results) {
+            const normalized = normalizeIncomingTransfer(transfer, checksummedAddress);
+            if (normalized) {
+              transactions.push(normalized);
+            }
           }
         }
       } else if (response.status !== 404 && response.status !== 422) {
@@ -352,13 +367,41 @@ export async function fetchTransactionHistory(
       console.warn('Failed to fetch incoming transfers:', incomingTransfers.reason);
     }
 
-    // If no transactions found, return empty array (graceful handling for new Safes)
-    if (transactions.length === 0) {
-      console.log('No transactions found for Safe:', checksummedAddress);
+    // Process executed multisig transactions
+    if (multisigTxs.status === 'fulfilled') {
+      const response = multisigTxs.value;
+      if (response.ok) {
+        const data: SafeApiResponse = await response.json();
+        if (data.results.length > 0) {
+          hasData = true;
+          for (const tx of data.results) {
+            const normalized = normalizeTransaction(tx, checksummedAddress);
+            if (normalized) {
+              transactions.push(normalized);
+            }
+          }
+        }
+      } else if (response.status !== 404 && response.status !== 422) {
+        // Log non-404/422 errors but continue
+        console.warn(`Error fetching multisig transactions (${response.status}):`, response.statusText);
+      }
+    } else {
+      console.warn('Failed to fetch multisig transactions:', multisigTxs.reason);
+    }
+
+    // If no transactions found from all endpoints, consider on-chain fallback
+    if (!hasData) {
+      console.log('No transactions found from Safe Transaction Service for:', checksummedAddress);
+      console.log('Consider implementing on-chain event parsing fallback for Transfer events');
+      // TODO: Implement on-chain event parsing via RPC
+      // This would involve:
+      // 1. Get Transfer event logs with Safe address as 'from' or 'to'
+      // 2. Parse the events and convert to SafeTransaction format
+      // 3. Return those transactions
       return [];
     }
 
-    // Deduplicate by txHash (all-transactions may already include some incoming transfers)
+    // Deduplicate by txHash (endpoints may have overlapping transactions)
     const seen = new Set<string>();
     const deduplicated = transactions.filter(tx => {
       if (seen.has(tx.txHash)) return false;

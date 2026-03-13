@@ -16,7 +16,8 @@ import {
   encodeShareableTransaction,
   packSingleSignerData,
 } from '../lib/multisig';
-import { NATIVE_TOKEN, type Token } from '../lib/tokens';
+import { NATIVE_TOKEN, type Token, formatTokenAmount } from '../lib/tokens';
+import { type SafeTransaction } from '../lib/history';
 
 type View = 'home' | 'send' | 'receive' | 'add-owner' | 'history';
 
@@ -185,6 +186,22 @@ export default function WalletDashboard({ safe, onDisconnect, onSafeChanged }: P
 
   const copy = (text: string) => navigator.clipboard.writeText(text).catch(() => {});
   const share = (url: string) => navigator.share?.({ url }).catch(() => {});
+
+  // Handle resend from transaction history
+  const handleResend = (transaction: SafeTransaction) => {
+    // Pre-fill the send form with transaction data
+    setSendTo(transaction.to);
+    setSendAmount(formatTokenAmount(transaction.amount, transaction.token));
+    setSelectedToken(transaction.token);
+    
+    // Clear any previous status/results
+    setSendStatus('');
+    setTxHash('');
+    setShareUrl('');
+    
+    // Switch to send view
+    setView('send');
+  };
 
   // ── HOME VIEW ──
   if (view === 'home') return (
@@ -420,6 +437,7 @@ export default function WalletDashboard({ safe, onDisconnect, onSafeChanged }: P
     <TransactionHistory 
       safeAddress={safe.address} 
       onBack={() => setView('home')} 
+      onResend={handleResend}
     />
   );
 
