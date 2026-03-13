@@ -67,6 +67,7 @@ export default function WalletDashboard({ safe, onDisconnect, onSafeChanged }: P
   // Transaction history (recent activity)
   const [recentTxs, setRecentTxs] = useState<SafeTransaction[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
 
   const localOwner = safe.owners.find(o => o.credentialId);
   const localCredentialId = localOwner?.credentialId ? base64ToArrayBuffer(localOwner.credentialId) : null;
@@ -469,18 +470,20 @@ export default function WalletDashboard({ safe, onDisconnect, onSafeChanged }: P
       )}
 
       {txHash && (
-        <div className="card fade-in" style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
-          <p style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Sent!</p>
-          <p className="text-secondary" style={{ fontSize: 14, marginBottom: 4 }}>
-            {sendAmount} {selectedToken.symbol} → {shortAddr(sendTo)}
+        <div className="card fade-in" style={{ textAlign: 'center', padding: 24 }}>
+          <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+          </div>
+          <p style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>Sent!</p>
+          <p className="text-secondary" style={{ fontSize: 15, marginBottom: 16 }}>
+            {sendAmount} {selectedToken.symbol} to {shortAddr(sendTo)}
           </p>
-          <a href={`${EXPLORER}/tx/${txHash}`} target="_blank" rel="noreferrer" style={{ color: 'var(--primary-from)', fontSize: 14 }}>
+          <a href={`${EXPLORER}/tx/${txHash}`} target="_blank" rel="noreferrer" style={{ color: 'var(--primary-from)', fontSize: 14, fontWeight: 500 }}>
             View on Explorer ↗
           </a>
-          <div className="row" style={{ marginTop: 16 }}>
+          <div className="row" style={{ marginTop: 20, gap: 12 }}>
             <button className="btn btn-secondary flex-1" onClick={() => { setSendStatus(''); setTxHash(''); setSendTo(''); setSendAmount(''); setSendMemo(''); setShareUrl(''); setShowReview(false); }}>Send More</button>
-            <button className="btn btn-primary flex-1" onClick={() => { setView('home'); setSendStatus(''); setTxHash(''); setSendTo(''); setSendAmount(''); setSendMemo(''); setShareUrl(''); setShowReview(false); setSelectedToken(NATIVE_TOKEN); }}>Go Home</button>
+            <button className="btn btn-primary flex-1" onClick={() => { setView('home'); setSendStatus(''); setTxHash(''); setSendTo(''); setSendAmount(''); setSendMemo(''); setShareUrl(''); setShowReview(false); setSelectedToken(NATIVE_TOKEN); }}>Back to Wallet</button>
           </div>
         </div>
       )}
@@ -533,9 +536,9 @@ export default function WalletDashboard({ safe, onDisconnect, onSafeChanged }: P
         <div className="row" style={{ gap: 8 }}>
           <button className="btn btn-primary btn-sm flex-1" onClick={() => {
             copy(safe.address);
-            const btn = document.activeElement as HTMLButtonElement;
-            if (btn) { const orig = btn.textContent; btn.textContent = 'Copied! ✓'; setTimeout(() => { btn.textContent = orig; }, 2000); }
-          }}>📋 Copy Address</button>
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+          }}>{copied ? 'Copied! ✓' : '📋 Copy Address'}</button>
           {typeof navigator.share === 'function' && (
             <button className="btn btn-secondary btn-sm flex-1" onClick={() => navigator.share({ text: safe.address }).catch(() => {})}>📤 Share</button>
           )}
