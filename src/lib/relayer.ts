@@ -1,7 +1,6 @@
 import { createWalletClient, createPublicClient, http } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { chain, EXPLORER } from './chain';
-import { chain, EXPLORER } from './chain';
 import { resilientTransport } from './rpc';
 
 export { chain, EXPLORER };
