@@ -7,6 +7,11 @@ export const baseSepolia: Chain = {
   nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
   rpcUrls: { default: { http: ['https://sepolia.base.org'] } },
   blockExplorers: { default: { name: 'BaseScan', url: 'https://sepolia.basescan.org' } },
+  contracts: {
+    multicall3: {
+      address: '0xca11bde05977b3631167028862be2a173976ca11' as `0x${string}`,
+    },
+  },
 };
 
 const privateKey = import.meta.env.VITE_RELAYER_PRIVATE_KEY as `0x${string}`;
