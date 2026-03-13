@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getTokenBalances, formatTokenAmount, formatUSDValue, type Token, type TokenBalance } from '../lib/tokens';
+import TokenIcon from './TokenIcon';
 
 interface Props {
   safeAddress: `0x${string}`;
@@ -63,12 +64,7 @@ export default function TokenSelector({ safeAddress, selectedToken, onSelect, on
                   className={`token-selector-item ${isSelected ? 'selected' : ''} ${!hasBalance ? 'zero-balance' : ''}`}
                   onClick={() => handleSelect(token)}
                 >
-                  <div className="token-icon">
-                    {token.symbol === 'ETH' && '⚡'}
-                    {token.symbol === 'USDC' && '💙'}
-                    {token.symbol === 'USDT' && '💚'}
-                    {token.symbol === 'WETH' && '🔷'}
-                  </div>
+                  <TokenIcon symbol={token.symbol} size={36} />
                   
                   <div className="token-info">
                     <div className="token-symbol">{token.symbol}</div>
