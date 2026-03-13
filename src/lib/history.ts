@@ -736,3 +736,49 @@ export function getTransactionTypeLabel(type: SafeTransaction['type']): string {
       return 'Transaction';
   }
 }
+
+// ── Pending Approvals from Safe Transaction Service ──
+
+export interface PendingApproval {
+  safeTxHash: string;
+  to: string;
+  value: string;
+  data: string;
+  operation: number;
+  nonce: number;
+  confirmationsRequired: number;
+  confirmations: { owner: string }[];
+  submissionDate: string;
+  proposer: string;
+  dataDecoded?: {
+    method: string;
+    parameters: { name: string; type: string; value: string }[];
+  };
+}
+
+export async function fetchPendingApprovals(safeAddress: string): Promise<PendingApproval[]> {
+  const baseUrl = 'https://safe-transaction-base-sepolia.safe.global';
+  try {
+    const response = await fetch(
+      `${baseUrl}/api/v1/safes/${safeAddress}/multisig-transactions/?executed=false&limit=20`
+    );
+    if (!response.ok) return [];
+    const data = await response.json();
+    return (data.results || []).map((tx: any) => ({
+      safeTxHash: tx.safeTxHash,
+      to: tx.to,
+      value: tx.value,
+      data: tx.data,
+      operation: tx.operation,
+      nonce: tx.nonce,
+      confirmationsRequired: tx.confirmationsRequired,
+      confirmations: tx.confirmations || [],
+      submissionDate: tx.submissionDate,
+      proposer: tx.proposer || tx.confirmations?.[0]?.owner || 'Unknown',
+      dataDecoded: tx.dataDecoded,
+    }));
+  } catch (err) {
+    console.warn('Failed to fetch pending approvals:', err);
+    return [];
+  }
+}
