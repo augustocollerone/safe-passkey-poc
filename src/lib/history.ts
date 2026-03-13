@@ -5,7 +5,8 @@ import { publicClient } from './relayer';
 // Normalized transaction interface
 export interface SafeTransaction {
   txHash: string;
-  type: 'send' | 'receive' | 'ownerChange' | 'unknown';
+  type: 'send' | 'receive' | 'ownerChange' | 'thresholdChange' | 'unknown';
+  nonce?: string;
   to: `0x${string}`;
   from: `0x${string}`;
   amount: bigint;
@@ -131,7 +132,7 @@ interface SafeApiIncomingTransfersResponse {
 function detectTransactionType(
   tx: SafeApiModuleTransaction | SafeApiMultisigTransaction,
   safeAddress: `0x${string}`
-): 'send' | 'receive' | 'ownerChange' | 'unknown' {
+): 'send' | 'receive' | 'ownerChange' | 'thresholdChange' | 'unknown' {
   const safe = safeAddress.toLowerCase();
   
   // Check if this is an owner management transaction
@@ -141,11 +142,14 @@ function detectTransactionType(
       // Check common owner management function selectors
       const selector = tx.data.slice(0, 10).toLowerCase();
       if (
-        selector === '0x7de7edef' || // addOwnerWithThreshold
+        selector === '0x0d582f13' || // addOwnerWithThreshold
         selector === '0xf8dc5dd9' || // removeOwner
-        selector === '0x694e80c3'    // swapOwner
+        selector === '0xe318b52b'    // swapOwner
       ) {
         return 'ownerChange';
+      }
+      if (selector === '0x694e80c3') { // changeThreshold
+        return 'thresholdChange';
       }
     }
   }
@@ -279,6 +283,7 @@ function normalizeTransaction(
     blockNumber: tx.blockNumber || undefined,
     safe: safeAddress,
     executionDate: tx.executionDate || undefined,
+    nonce: tx.type === 'MULTISIG_TRANSACTION' ? String(tx.nonce) : undefined,
   };
 }
 
@@ -694,7 +699,9 @@ export function getTransactionIcon(type: SafeTransaction['type']): string {
     case 'receive':
       return '↓';
     case 'ownerChange':
-      return '👥';
+      return '👤';
+    case 'thresholdChange':
+      return '🔒';
     default:
       return '•';
   }
@@ -708,7 +715,9 @@ export function getTransactionTypeLabel(type: SafeTransaction['type']): string {
     case 'receive':
       return 'Received';
     case 'ownerChange':
-      return 'Owner Change';
+      return 'Signer Change';
+    case 'thresholdChange':
+      return 'Threshold Changed';
     default:
       return 'Transaction';
   }

@@ -31,7 +31,10 @@ export default function TransactionHistory({ safeAddress, onBack, onResend }: Pr
         const txs = await fetchTransactionHistory(safeAddress);
         setTransactions(txs);
         // Auto-cleanup pending txs whose nonce has been executed
-        cleanupExecutedPendingTxs(safeAddress, new Set<string>());
+        const confirmedNonces = new Set(
+          txs.filter(t => t.status === 'confirmed' && t.nonce).map(t => t.nonce!).filter(Boolean)
+        );
+        cleanupExecutedPendingTxs(safeAddress, confirmedNonces);
         setPendingTxs(getPendingTransactions(safeAddress));
       } catch (err: any) {
         console.error('Failed to fetch transaction history:', err);
@@ -73,7 +76,7 @@ export default function TransactionHistory({ safeAddress, onBack, onResend }: Pr
         >
           ←
         </button>
-        <h2 style={{ fontSize: 20, fontWeight: 700 }}>Transaction History</h2>
+        <h2 style={{ fontSize: 20, fontWeight: 700 }}>Activity History</h2>
       </div>
       
       {/* Token Filter Chips */}
