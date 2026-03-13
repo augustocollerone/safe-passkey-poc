@@ -55,6 +55,13 @@ export default function InviteSigner({ safe, onBack }: Props) {
           setPhase('error');
           return;
         }
+
+        // Auto-copy on generation
+        try {
+          await navigator.clipboard.writeText(url);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 3000);
+        } catch { /* clipboard may not be available */ }
         
         setPhase('ready');
       } catch (err: any) {
@@ -290,18 +297,25 @@ export default function InviteSigner({ safe, onBack }: Props) {
             </div>
           </div>
 
-          <div className="stack">
-            <div className="row">
-              <button className="btn btn-secondary flex-1" onClick={handleCopy}>
-                {copied ? '✅ Copied!' : '📋 Copy Link'}
-              </button>
-              {typeof navigator.share === 'function' && (
-                <button className="btn btn-secondary flex-1" onClick={handleShare}>
-                  📤 Share
-                </button>
-              )}
-            </div>
-            <button className="btn btn-primary" onClick={handleWaitForSigner}>
+          <div className="stack" style={{ gap: 8 }}>
+            <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => {
+              if (typeof navigator.share === 'function') {
+                navigator.share({
+                  title: 'Join my wallet',
+                  text: 'You\'ve been invited to join my passkey wallet',
+                  url: inviteUrl,
+                }).catch(() => {});
+              } else {
+                handleCopy();
+              }
+            }}>
+              {typeof navigator.share === 'function' ? 'Share Invite Link' : (copied ? 'Copied!' : 'Share Invite Link')}
+            </button>
+            {copied && (
+              <p className="text-sm text-center" style={{ color: 'var(--success, #22c55e)' }}>Link copied to clipboard ✓</p>
+            )}
+            <div className="invite-link-box">{inviteUrl}</div>
+            <button className="btn btn-secondary" style={{ width: '100%' }} onClick={handleWaitForSigner}>
               Continue →
             </button>
           </div>

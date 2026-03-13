@@ -107,7 +107,7 @@ export default function WalletDashboard({ safe, onDisconnect, onSafeChanged }: P
   // QR for receive
   useEffect(() => {
     if (view === 'receive' && receiveQrRef.current) {
-      QRCode.toCanvas(receiveQrRef.current, safe.address, { width: 200, margin: 2 }).catch(() => {});
+      QRCode.toCanvas(receiveQrRef.current, safe.address, { width: 280, margin: 2 }).catch(() => {});
     }
   }, [view, safe.address]);
 
@@ -628,21 +628,37 @@ export default function WalletDashboard({ safe, onDisconnect, onSafeChanged }: P
         <h2 style={{ fontSize: 20, fontWeight: 700 }}>Receive</h2>
       </div>
 
-      <div className="card" style={{ textAlign: 'center' }}>
-        <canvas ref={receiveQrRef} style={{ marginBottom: 16 }} />
-        <p className="text-secondary text-sm" style={{ marginBottom: 12 }}>Share this address to receive funds</p>
-        <div className="addr-chip" style={{ marginBottom: 12, fontFamily: 'monospace', fontSize: 13, wordBreak: 'break-all', letterSpacing: '0.5px' }}>
+      <div className="card" style={{ textAlign: 'center', padding: 24 }}>
+        <p style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>My Wallet</p>
+        <p className="text-secondary text-sm" style={{ marginBottom: 20 }}>Scan to send funds here</p>
+
+        <div className="receive-qr-wrapper">
+          <canvas ref={receiveQrRef} />
+        </div>
+
+        <div className="addr-chip" style={{ marginBottom: 16, fontFamily: 'monospace', fontSize: 13, wordBreak: 'break-all', letterSpacing: '0.5px' }}>
           {safe.address.slice(0, 6) + ' ' + safe.address.slice(6).match(/.{1,4}/g)!.join(' ')}
         </div>
-        <div className="row" style={{ gap: 8 }}>
-          <button className="btn btn-primary btn-sm flex-1" onClick={() => {
+
+        <div className="stack" style={{ gap: 8 }}>
+          <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => {
+            if (typeof navigator.share === 'function') {
+              navigator.share({ title: 'My Wallet Address', text: safe.address }).catch(() => {});
+            } else {
+              copy(safe.address);
+              setCopied(true);
+              setTimeout(() => setCopied(false), 2000);
+            }
+          }}>
+            {typeof navigator.share === 'function' ? 'Share Address' : (copied ? 'Copied! ✓' : 'Share Address')}
+          </button>
+          <button className={`btn btn-secondary receive-copy-btn ${copied ? 'copied' : ''}`} style={{ width: '100%' }} onClick={() => {
             copy(safe.address);
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
-          }}>{copied ? 'Copied! ✓' : '📋 Copy Address'}</button>
-          {typeof navigator.share === 'function' && (
-            <button className="btn btn-secondary btn-sm flex-1" onClick={() => navigator.share({ text: safe.address }).catch(() => {})}>📤 Share</button>
-          )}
+          }}>
+            {copied ? 'Copied! ✓' : 'Copy Address'}
+          </button>
         </div>
       </div>
     </div>
