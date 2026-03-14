@@ -20,3 +20,6 @@ export const publicClient = createPublicClient({
   chain,
   transport: http(),
 });
+
+// Nonce management: let viem handle it automatically.
+// Manual nonce management caused more issues than it solved (stale RPC cache).

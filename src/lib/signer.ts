@@ -60,7 +60,7 @@ export async function deploySignerProxy(x: bigint, y: bigint): Promise<`0x${stri
     abi: FACTORY_ABI,
     functionName: 'createSigner',
     args: [x, y, VERIFIERS],
-    gas: 200_000n, // explicit gas limit to avoid estimation issues
+    gas: 200_000n,
   });
 
   await publicClient.waitForTransactionReceipt({ hash });
