@@ -145,29 +145,10 @@ export default function SignersView({ safe, onBack }: Props) {
           icon: e.icon,
         }));
 
-        // Skip the initial setup() events: Safe creation always emits
-        // AddedOwner (for initial owner) + ChangedThreshold(1) in the earliest block.
-        // We find the oldest block and remove exactly those 2 genesis events.
-        if (events.length >= 2) {
-          const oldestBlock = events[events.length - 1].blockNumber;
-          // Count genesis events: 1 AddedOwner + 1 ChangedThreshold in the oldest block
-          let genesisCount = 0;
-          for (let i = events.length - 1; i >= 0; i--) {
-            if (events[i].blockNumber !== oldestBlock) break;
-            genesisCount++;
-          }
-          // Only strip if it looks like genesis (exactly 2: 1 add + 1 threshold)
-          if (genesisCount === 2) {
-            setSignerHistory(finalEvents.slice(0, finalEvents.length - 2));
-          } else {
-            setSignerHistory(finalEvents);
-          }
-        } else {
-          // 0-1 events means it's just creation, show empty
-          setSignerHistory([]);
-        }
+        console.log('[SignersView]', { safeAddr: safe.address, fromBlock: fromBlock.toString(), added: addedLogs.length, removed: removedLogs.length, threshold: thresholdLogs.length, finalEvents: finalEvents.length });
+        setSignerHistory(finalEvents);
       } catch (err) {
-        console.error('Failed to fetch signer history:', err);
+        console.error('[SignersView] Failed to fetch signer history:', err);
       }
       setHistoryLoading(false);
     };
