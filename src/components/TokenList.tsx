@@ -12,7 +12,6 @@ interface Props {
 export default function TokenList({ safeAddress, ethBalance, onTokenSelect }: Props) {
   const [balances, setBalances] = useState<TokenBalance[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showAll, setShowAll] = useState(false);
 
   // Fetch token balances
   useEffect(() => {
@@ -121,26 +120,29 @@ export default function TokenList({ safeAddress, ethBalance, onTokenSelect }: Pr
     );
   }
 
-  const MIN_VISIBLE = 3;
+  const ALWAYS_SHOW = ['ETH', 'USDT', 'USDC'];
 
   const allTokens = balances.filter(b => b.token.symbol !== 'WETH'); // Hide WETH
 
-  // Sort: tokens with balance first, then zero-balance
-  const sorted = [...allTokens].sort((a, b) => {
-    const aHas = parseFloat(a.formattedBalance) > 0 || a.token.symbol === 'ETH' ? 1 : 0;
-    const bHas = parseFloat(b.formattedBalance) > 0 || b.token.symbol === 'ETH' ? 1 : 0;
-    return bHas - aHas;
+  // Always show ETH, USDT, USDC (even with 0 balance) + any token with balance
+  const visibleTokens = allTokens.filter(b => {
+    const hasBalance = parseFloat(b.formattedBalance) > 0;
+    const isPinned = ALWAYS_SHOW.includes(b.token.symbol);
+    return isPinned || hasBalance;
+  // Sort: pinned order first, then by USD value
+  }).sort((a, b) => {
+    const aPin = ALWAYS_SHOW.indexOf(a.token.symbol);
+    const bPin = ALWAYS_SHOW.indexOf(b.token.symbol);
+    const aIsPinned = aPin !== -1;
+    const bIsPinned = bPin !== -1;
+    // Both pinned → keep ALWAYS_SHOW order
+    if (aIsPinned && bIsPinned) return aPin - bPin;
+    // Pinned first
+    if (aIsPinned) return -1;
+    if (bIsPinned) return 1;
+    // Rest by USD value descending
+    return (b.usdValue || 0) - (a.usdValue || 0);
   });
-
-  const visibleTokens = showAll
-    ? sorted
-    : sorted.filter((b, index) => {
-        const hasBalance = parseFloat(b.formattedBalance) > 0;
-        const isNative = b.token.symbol === 'ETH';
-        return isNative || hasBalance || index < MIN_VISIBLE;
-      });
-
-  const hiddenCount = sorted.length - visibleTokens.length;
 
   return (
     <div className="card">
@@ -272,42 +274,7 @@ export default function TokenList({ safeAddress, ethBalance, onTokenSelect }: Pr
         )}
       </div>
 
-      {/* Toggle Zero Balances */}
-      {hiddenCount > 0 && (
-        <div style={{ 
-          marginTop: 'var(--spacing-md)',
-          borderTop: '1px solid var(--border-light)',
-          paddingTop: 'var(--spacing-md)'
-        }}>
-          <button 
-            className="btn btn-ghost btn-sm" 
-            style={{ 
-              width: '100%',
-              fontSize: 12,
-              color: 'var(--text-secondary)',
-              padding: 'var(--spacing-sm)',
-              height: 'auto'
-            }}
-            onClick={() => setShowAll(!showAll)}
-          >
-            {showAll ? (
-              <>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="18 15 12 9 6 15" />
-                </svg>
-                Hide zero balances
-              </>
-            ) : (
-              <>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="6 9 12 15 18 9" />
-                </svg>
-                Show {hiddenCount} more token{hiddenCount === 1 ? '' : 's'}
-              </>
-            )}
-          </button>
-        </div>
-      )}
+      {/* All tokens shown inline — no toggle needed */}
     </div>
   );
 }
