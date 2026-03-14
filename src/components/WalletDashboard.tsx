@@ -4,6 +4,7 @@ import QRCode from 'qrcode';
 import { publicClient, EXPLORER } from '../lib/relayer';
 import SlideToConfirm from './shared/SlideToConfirm';
 import TokenList from './TokenList';
+import MultichainBalances from './MultichainBalances';
 import TokenSelector from './TokenSelector';
 import SafeSelector from './SafeSelector';
 import TransactionHistory from './TransactionHistory';
@@ -282,8 +283,11 @@ export default function WalletDashboard({ safe, onDisconnect, onSafeChanged }: P
 
       {/* Action buttons removed — Send & Convert are in the tab bar */}
 
-      {/* Token List */}
+      {/* Token List (primary chain) */}
       <TokenList safeAddress={safe.address} ethBalance={balance} />
+
+      {/* Multichain Balances */}
+      <MultichainBalances safeAddress={safe.address} />
 
       {/* Pending Approvals */}
       {pendingApprovals.length > 0 && (
