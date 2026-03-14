@@ -261,14 +261,6 @@ export default function WalletDashboard({ safe, onDisconnect, onSafeChanged }: P
               <span style={{ position: 'absolute', top: 4, right: 4, width: 8, height: 8, borderRadius: '50%', background: '#F59E0B' }} />
             )}
           </button>
-          <button 
-            className="btn btn-icon" 
-            style={{ width: 40, height: 40, fontSize: 16 }} 
-            onClick={() => window.location.hash = '#/settings'}
-            title="Settings"
-          >
-            ⚙️
-          </button>
         </div>
       </div>
 
@@ -288,18 +280,7 @@ export default function WalletDashboard({ safe, onDisconnect, onSafeChanged }: P
         })()}
       </div>
 
-      {/* Action Buttons */}
-      <div className="action-buttons">
-        <button className="btn btn-primary flex-1" onClick={() => setView('send')}>
-          Send
-        </button>
-        <button className="btn btn-secondary flex-1" onClick={() => setView('receive')}>
-          Receive
-        </button>
-        <button className="btn btn-secondary flex-1" onClick={() => setView('swap')}>
-          Convert
-        </button>
-      </div>
+      {/* Action buttons removed — Send & Convert are in the tab bar */}
 
       {/* Token List */}
       <TokenList safeAddress={safe.address} ethBalance={balance} />
@@ -426,6 +407,69 @@ export default function WalletDashboard({ safe, onDisconnect, onSafeChanged }: P
           View on Explorer ↗
         </a>
       </div>
+
+      {/* Bottom spacer for tab bar */}
+      <div style={{ height: 72 }} />
+
+      {/* Tab Bar */}
+      <nav style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0,
+        height: 64,
+        background: 'var(--bg-primary)',
+        borderTop: '1px solid var(--border)',
+        display: 'flex', justifyContent: 'space-around', alignItems: 'center',
+        paddingBottom: 'env(safe-area-inset-bottom)',
+        zIndex: 100,
+      }}>
+        <button
+          onClick={() => setView('home')}
+          style={{
+            flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+            background: 'none', border: 'none', cursor: 'pointer', padding: '8px 0',
+            color: view === 'home' ? 'var(--primary-from)' : 'var(--text-muted)',
+            fontSize: 20,
+          }}
+        >
+          <span>🏠</span>
+          <span style={{ fontSize: 10, fontWeight: 500 }}>Home</span>
+        </button>
+        <button
+          onClick={() => setView('send')}
+          style={{
+            flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+            background: 'none', border: 'none', cursor: 'pointer', padding: '8px 0',
+            color: 'var(--text-muted)',
+            fontSize: 20,
+          }}
+        >
+          <span>↗️</span>
+          <span style={{ fontSize: 10, fontWeight: 500 }}>Send</span>
+        </button>
+        <button
+          onClick={() => setView('swap')}
+          style={{
+            flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+            background: 'none', border: 'none', cursor: 'pointer', padding: '8px 0',
+            color: 'var(--text-muted)',
+            fontSize: 20,
+          }}
+        >
+          <span>🔄</span>
+          <span style={{ fontSize: 10, fontWeight: 500 }}>Convert</span>
+        </button>
+        <button
+          onClick={() => window.location.hash = '#/settings'}
+          style={{
+            flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+            background: 'none', border: 'none', cursor: 'pointer', padding: '8px 0',
+            color: 'var(--text-muted)',
+            fontSize: 20,
+          }}
+        >
+          <span>⚙️</span>
+          <span style={{ fontSize: 10, fontWeight: 500 }}>Settings</span>
+        </button>
+      </nav>
     </div>
   );
 
