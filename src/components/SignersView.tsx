@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { parseAbiItem } from 'viem';
+import { publicClient } from '../lib/relayer';
 import { type SavedSafe } from '../lib/storage';
 import { getOwners, getThreshold, getNonce, execTransaction, encodeChangeThreshold } from '../lib/safe';
 import { computeSafeTxHash, packSafeSignature } from '../lib/encoding';
@@ -25,13 +27,16 @@ const extractClientDataFields = (clientDataJSON: string, challengeOffset: number
 };
 
 interface SignerEvent {
-  method: string;
   description: string;
-  timeAgo: string;
+  timestamp: number;
   icon: string;
 }
 
-const TX_SERVICE = 'https://safe-transaction-base-sepolia.safe.global/api/v1';
+const SAFE_EVENTS = {
+  AddedOwner: parseAbiItem('event AddedOwner(address owner)'),
+  RemovedOwner: parseAbiItem('event RemovedOwner(address owner)'),
+  ChangedThreshold: parseAbiItem('event ChangedThreshold(uint256 threshold)'),
+} as const;
 
 export default function SignersView({ safe, onBack }: Props) {
   const [owners, setOwners] = useState<`0x${string}`[]>([]);
@@ -62,47 +67,115 @@ export default function SignersView({ safe, onBack }: Props) {
     loadData();
   }, [safe.address]);
 
-  // Fetch signer activity history
+  // Fetch signer activity history from on-chain event logs
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        const res = await fetch(`${TX_SERVICE}/safes/${safe.address}/all-transactions/?limit=50&executed=true`);
-        if (!res.ok) throw new Error('Failed to fetch');
-        const data = await res.json();
-        const signerMethods = ['addOwnerWithThreshold', 'removeOwner', 'swapOwner', 'changeThreshold'];
-        const events: SignerEvent[] = [];
+        // Get Safe creation block to limit scan range (fallback to last 100k blocks)
+        const currentBlock = await publicClient.getBlockNumber();
+        const fromBlock = currentBlock > 100_000n ? currentBlock - 100_000n : 0n;
 
-        for (const tx of data.results || []) {
-          const dd = tx.dataDecoded;
-          if (!dd || !signerMethods.includes(dd.method)) continue;
+        const [addedLogs, removedLogs, thresholdLogs] = await Promise.all([
+          publicClient.getLogs({
+            address: safe.address as `0x${string}`,
+            event: SAFE_EVENTS.AddedOwner,
+            fromBlock,
+          }),
+          publicClient.getLogs({
+            address: safe.address as `0x${string}`,
+            event: SAFE_EVENTS.RemovedOwner,
+            fromBlock,
+          }),
+          publicClient.getLogs({
+            address: safe.address as `0x${string}`,
+            event: SAFE_EVENTS.ChangedThreshold,
+            fromBlock,
+          }),
+        ]);
 
-          const ts = tx.executionDate || tx.submissionDate;
-          const timeAgo = formatTimeAgo(ts);
+        const events: (SignerEvent & { blockNumber: bigint; logIndex: number })[] = [];
 
-          if (dd.method === 'addOwnerWithThreshold') {
-            const owner = dd.parameters?.find((p: any) => p.name === 'owner')?.value || '?';
-            events.push({ method: dd.method, description: `${shortAddr(owner)} added`, timeAgo, icon: '👤' });
-          } else if (dd.method === 'removeOwner') {
-            const owner = dd.parameters?.find((p: any) => p.name === 'owner')?.value || '?';
-            events.push({ method: dd.method, description: `${shortAddr(owner)} removed`, timeAgo, icon: '🚫' });
-          } else if (dd.method === 'swapOwner') {
-            const oldOwner = dd.parameters?.find((p: any) => p.name === 'oldOwner')?.value || '?';
-            const newOwner = dd.parameters?.find((p: any) => p.name === 'newOwner')?.value || '?';
-            events.push({ method: dd.method, description: `${shortAddr(oldOwner)} → ${shortAddr(newOwner)}`, timeAgo, icon: '🔄' });
-          } else if (dd.method === 'changeThreshold') {
-            const t = dd.parameters?.find((p: any) => p.name === '_threshold')?.value || '?';
-            events.push({ method: dd.method, description: `Threshold → ${t}`, timeAgo, icon: '🔧' });
-          }
+        for (const log of addedLogs) {
+          const addr = log.args.owner;
+          if (!addr) continue;
+          events.push({
+            description: `${shortAddr(addr)} added`,
+            timestamp: 0,
+            icon: '👤',
+            blockNumber: log.blockNumber,
+            logIndex: log.logIndex,
+          });
         }
-        setSignerHistory(events);
-      } catch {}
+
+        for (const log of removedLogs) {
+          const addr = log.args.owner;
+          if (!addr) continue;
+          events.push({
+            description: `${shortAddr(addr)} removed`,
+            timestamp: 0,
+            icon: '🚫',
+            blockNumber: log.blockNumber,
+            logIndex: log.logIndex,
+          });
+        }
+
+        for (const log of thresholdLogs) {
+          const t = log.args.threshold;
+          if (t === undefined) continue;
+          events.push({
+            description: `Threshold → ${t}`,
+            timestamp: 0,
+            icon: '🔧',
+            blockNumber: log.blockNumber,
+            logIndex: log.logIndex,
+          });
+        }
+
+        // Sort by block (newest first), then by log index
+        events.sort((a, b) => {
+          if (a.blockNumber !== b.blockNumber) return Number(b.blockNumber - a.blockNumber);
+          return b.logIndex - a.logIndex;
+        });
+
+        // Fetch block timestamps for display
+        const uniqueBlocks = [...new Set(events.map(e => e.blockNumber))];
+        const blockTimestamps = new Map<bigint, number>();
+        await Promise.all(
+          uniqueBlocks.slice(0, 20).map(async (bn) => {
+            try {
+              const block = await publicClient.getBlock({ blockNumber: bn });
+              blockTimestamps.set(bn, Number(block.timestamp) * 1000);
+            } catch {}
+          })
+        );
+
+        const finalEvents: SignerEvent[] = events.map(e => ({
+          description: e.description,
+          timestamp: blockTimestamps.get(e.blockNumber) || 0,
+          icon: e.icon,
+        }));
+
+        // Skip the initial AddedOwner + ChangedThreshold from Safe creation (first 2 events chronologically)
+        // These are always emitted during setup() and aren't user actions
+        if (finalEvents.length > 0) {
+          // Remove last items (oldest) that are from the same block (creation block)
+          const creationBlock = events[events.length - 1]?.blockNumber;
+          const creationEvents = events.filter(e => e.blockNumber === creationBlock).length;
+          setSignerHistory(finalEvents.slice(0, finalEvents.length - creationEvents));
+        } else {
+          setSignerHistory([]);
+        }
+      } catch (err) {
+        console.error('Failed to fetch signer history:', err);
+      }
       setHistoryLoading(false);
     };
     fetchHistory();
   }, [safe.address]);
 
-  const formatTimeAgo = (dateStr: string) => {
-    const diff = Date.now() - new Date(dateStr).getTime();
+  const formatTimeAgo = (ts: number) => {
+    if (!ts) return '';
+    const diff = Date.now() - ts;
     const mins = Math.floor(diff / 60000);
     if (mins < 60) return `${mins}m ago`;
     const hrs = Math.floor(mins / 60);
@@ -315,7 +388,7 @@ export default function SignersView({ safe, onBack }: Props) {
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ fontSize: 13, fontWeight: 500 }}>{event.description}</p>
-                  <p className="text-muted" style={{ fontSize: 11 }}>{event.timeAgo}</p>
+                  <p className="text-muted" style={{ fontSize: 11 }}>{formatTimeAgo(event.timestamp)}</p>
                 </div>
               </div>
             ))}
