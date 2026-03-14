@@ -181,7 +181,7 @@ async function getTokenPricesUSD(): Promise<Record<string, number>> {
 }
 
 // Map token symbols to CoinGecko IDs
-function getCoingeckoId(symbol: string): string {
+export function getCoingeckoId(symbol: string): string {
   const mapping: Record<string, string> = {
     'ETH': 'ethereum',
     'USDC': 'usd-coin', 

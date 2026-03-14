@@ -10,6 +10,7 @@ import TransactionHistory from './TransactionHistory';
 import TransactionItem from './TransactionItem';
 import TokenIcon from './TokenIcon';
 import SwapView from './SwapView';
+import TokenDetail from './TokenDetail';
 import { getNonce, execTransaction, getOwners, getThreshold, encodeAddOwnerWithThreshold, encodeERC20Transfer } from '../lib/safe';
 import { cacheLocalTransaction, fetchTransactionHistory, savePendingTransaction, fetchPendingApprovals, type PendingApproval } from '../lib/history';
 import { computeSafeTxHash, packSafeSignature } from '../lib/encoding';
@@ -24,7 +25,7 @@ import { NATIVE_TOKEN, type Token, formatTokenAmount, formatUSDValue, getTokenBa
 import { type SafeTransaction } from '../lib/history';
 import { cacheGet } from '../lib/cache';
 
-type View = 'home' | 'send' | 'receive' | 'add-owner' | 'history' | 'swap';
+type View = 'home' | 'send' | 'receive' | 'add-owner' | 'history' | 'swap' | 'token-detail';
 
 interface Props {
   safe: SavedSafe;
@@ -61,6 +62,7 @@ export default function WalletDashboard({ safe, onDisconnect, onSafeChanged }: P
     return [];
   });
   const [showTokenSelector, setShowTokenSelector] = useState(false);
+  const [detailToken, setDetailToken] = useState<{ token: Token; balance: TokenBalance } | null>(null);
   const [sendMemo, setSendMemo] = useState('');
   const [showReview, setShowReview] = useState(false);
   const shareQrRef = useRef<HTMLCanvasElement>(null);
@@ -347,7 +349,7 @@ export default function WalletDashboard({ safe, onDisconnect, onSafeChanged }: P
       {/* Action buttons removed — Send & Convert are in the tab bar */}
 
       {/* Token List */}
-      <TokenList safeAddress={safe.address} ethBalance={balance} />
+      <TokenList safeAddress={safe.address} ethBalance={balance} onTokenSelect={(t, b) => { setDetailToken({ token: t, balance: b }); setView('token-detail'); }} />
 
       {/* Pending Approvals */}
       {pendingApprovals.length > 0 && (
@@ -784,6 +786,17 @@ export default function WalletDashboard({ safe, onDisconnect, onSafeChanged }: P
     <SwapView 
       safe={safe}
       onBack={() => setView('home')}
+    />
+  );
+
+  // ── TOKEN DETAIL VIEW ──
+  if (view === 'token-detail' && detailToken) return (
+    <TokenDetail
+      token={detailToken.token}
+      balance={detailToken.balance}
+      safeAddress={safe.address}
+      onBack={() => setView('home')}
+      onSwap={() => setView('swap')}
     />
   );
 

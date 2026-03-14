@@ -6,9 +6,10 @@ import TokenIcon from './TokenIcon';
 interface Props {
   safeAddress: `0x${string}`;
   ethBalance?: bigint;
+  onTokenSelect?: (token: import('../lib/tokens').Token, balance: import('../lib/tokens').TokenBalance) => void;
 }
 
-export default function TokenList({ safeAddress, ethBalance }: Props) {
+export default function TokenList({ safeAddress, ethBalance, onTokenSelect }: Props) {
   const [balances, setBalances] = useState<TokenBalance[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAll, setShowAll] = useState(false);
@@ -96,6 +97,8 @@ export default function TokenList({ safeAddress, ethBalance }: Props) {
             <div 
               key={token.address} 
               className={`token-item ${!hasBalance ? 'token-item-zero' : ''}`}
+              onClick={() => onTokenSelect?.(token, balance)}
+              style={{ cursor: onTokenSelect ? 'pointer' : undefined }}
             >
               <TokenIcon symbol={token.symbol} size={36} />
               
