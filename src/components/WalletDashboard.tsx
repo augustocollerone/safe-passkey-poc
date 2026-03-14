@@ -237,41 +237,34 @@ export default function WalletDashboard({ safe, onDisconnect, onSafeChanged }: P
   // ── HOME VIEW ──
   if (view === 'home') return (
     <div className="fade-in stack-lg">
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2 
-          style={{ fontSize: 20, fontWeight: 700, cursor: 'pointer' }} 
+      {/* Balance Card with address */}
+      <div className="card-gradient" style={{ textAlign: 'center', paddingTop: 24, paddingBottom: 24 }}>
+        {/* Address chip */}
+        <div
           onClick={() => {
             copy(safe.address);
             setHeaderCopied(true);
             setTimeout(() => setHeaderCopied(false), 2000);
           }}
-          title="Tap to copy address"
-        >{headerCopied ? '✅ Copied!' : '🔐 My Wallet'}</h2>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span className="text-muted" style={{ fontSize: 13, fontFamily: 'monospace' }}>{safe.address.slice(0, 6)}…{safe.address.slice(-4)}</span>
-          <button
-            className="btn btn-icon"
-            style={{ width: 32, height: 32 }}
-            onClick={() => {
-              copy(safe.address);
-              setHeaderCopied(true);
-              setTimeout(() => setHeaderCopied(false), 2000);
-            }}
-            title="Copy address"
-          >
-            {headerCopied ? (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary-from)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-            ) : (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
-            )}
-          </button>
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            background: 'rgba(255,255,255,0.1)', borderRadius: 20,
+            padding: '6px 14px', cursor: 'pointer',
+            marginBottom: 16, transition: 'background 0.2s',
+          }}
+        >
+          <span style={{ fontSize: 12, fontFamily: 'monospace', opacity: 0.9 }}>
+            {headerCopied ? '✓ Copied!' : `${safe.address.slice(0, 6)}…${safe.address.slice(-4)}`}
+          </span>
+          {!headerCopied && (
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.7 }}>
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+            </svg>
+          )}
         </div>
-      </div>
 
-      {/* Balance Card */}
-      <div className="card-gradient" style={{ textAlign: 'center' }}>
-        <p style={{ fontSize: 14, opacity: 0.8, marginBottom: 4 }}>Total Balance</p>
+        {/* Balance */}
+        <p style={{ fontSize: 13, opacity: 0.6, marginBottom: 4 }}>Total Balance</p>
         {(() => {
           const totalUSD = tokenBalances.reduce((sum, b) => sum + (b.usdValue || 0), 0);
           return totalUSD > 0 ? (
