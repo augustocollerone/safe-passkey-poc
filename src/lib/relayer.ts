@@ -21,7 +21,5 @@ export const publicClient = createPublicClient({
   transport: http(),
 });
 
-/** Get fresh nonce for the relayer to avoid race conditions with concurrent users */
-export async function getRelayerNonce(): Promise<number> {
-  return publicClient.getTransactionCount({ address: relayerAccount.address, blockTag: 'pending' });
-}
+// Nonce management: let viem handle it automatically.
+// Manual nonce management caused more issues than it solved (stale RPC cache).
